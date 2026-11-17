@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "submission_id": "BEEP-TEST-001",
+  "vendor": {
+    "vendor_id": "sample-vendor-a",
+    "vendor_name": "Sample Vendor A"
+  },
+  "software": {
+    "product_name": "Sample Energy Modeler",
+    "product_version": "1.0.0",
+    "engine": "OpenStudio-ERI",
+    "engine_version": "not-specified"
+  },
+  "test": {
+    "test_home_id": "BEEP-HOME-001",
+    "test_home_version": "1.0.0",
+    "test_cycle": "2026-Q4",
+    "compliance_path": "ERI"
+  },
+  "files": {
+    "building": "building.xml",
+    "results": "results.json",
+    "component_map": "component-map.json",
+    "manifest": "manifest.json"
+  }
+}
