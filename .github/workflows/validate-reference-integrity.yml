@@ -32,3 +32,21 @@ jobs:
       - name: Validate reference home integrity
         run: |
           python test-homes/validate_reference_integrity.py
+
+      - name: Run reference integrity unit tests
+        run: |
+          python -m unittest discover \
+            -s test-homes \
+            -p "test_validate_reference_integrity.py" \
+            -v
+
+      - name: Validate reference home approvals
+        run: |
+          python test-homes/validate_reference_approval.py
+
+      - name: Run reference approval unit tests
+        run: |
+          python -m unittest discover \
+            -s test-homes \
+            -p "test_validate_reference_approval.py" \
+            -v
