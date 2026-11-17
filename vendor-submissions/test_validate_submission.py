@@ -407,6 +407,90 @@ class TestVendorSubmissionValidator(unittest.TestCase):
                 and "hash_algorithm" in e for e in errors)
         )
 
+    def test_production_rejects_sample_data(self):
+        errors = validate_submission(self.folder, production=True)
+
+        self.assertTrue(
+            any("COMPLETED calculation status" in e for e in errors)
+        )
+
+    def test_production_rejects_missing_engine_version(self):
+        self.generate_test_hashes()
+
+        submission_path = self.folder / "submission.json"
+        submission = json.loads(
+            submission_path.read_text(encoding="utf-8")
+        )
+
+        submission["software"]["engine_version"] = "not-specified"
+
+        submission_path.write_text(
+            json.dumps(submission, indent=2),
+            encoding="utf-8"
+        )
+
+        errors = validate_submission(self.folder, production=True)
+
+        self.assertTrue(
+            any("valid engine_version" in e for e in errors)
+        )
+
+    def test_production_rejects_development_manifest(self):
+        errors = validate_submission(self.folder, production=True)
+
+        self.assertTrue(
+            any("requires generated SHA-256 checksums" in e
+                for e in errors)
+        )
+
+    def test_production_rejects_missing_checksum(self):
+        self.generate_test_hashes()
+
+        manifest_path = self.folder / "manifest.json"
+        manifest = json.loads(
+            manifest_path.read_text(encoding="utf-8")
+        )
+
+        manifest["files"][0]["sha256"] = None
+
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2),
+            encoding="utf-8"
+        )
+
+        errors = validate_submission(self.folder, production=True)
+
+        self.assertTrue(
+            any("Missing production checksum" in e for e in errors)
+        )
+
+    def test_production_accepts_complete_submission(self):
+        submission_path = self.folder / "submission.json"
+        submission = json.loads(
+            submission_path.read_text(encoding="utf-8")
+        )
+        submission["software"]["engine_version"] = "1.0.0"
+        submission_path.write_text(
+            json.dumps(submission, indent=2),
+            encoding="utf-8"
+        )
+
+        results_path = self.folder / "results.json"
+        results = json.loads(
+            results_path.read_text(encoding="utf-8")
+        )
+        results["calculation_status"] = "COMPLETED"
+        results_path.write_text(
+            json.dumps(results, indent=2),
+            encoding="utf-8"
+        )
+
+        self.generate_test_hashes()
+
+        errors = validate_submission(self.folder, production=True)
+
+        self.assertEqual(errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()
