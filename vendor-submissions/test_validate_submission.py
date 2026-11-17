@@ -107,5 +107,66 @@ class TestVendorSubmissionValidator(unittest.TestCase):
         )
 
 
+    def update_results(self, change):
+        path = self.folder / "results.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        change(data)
+        path.write_text(
+            json.dumps(data, indent=2),
+            encoding="utf-8"
+        )
+        return validate_submission(self.folder)
+
+    def test_incorrect_energy_total(self):
+        def change(data):
+            data["results"]["annual_energy"]["total_site_kwh"] = 15000
+
+        errors = self.update_results(change)
+
+        self.assertTrue(
+            any("Annual energy total mismatch" in e for e in errors)
+        )
+
+    def test_negative_energy_value(self):
+        def change(data):
+            data["results"]["annual_energy"]["heating_kwh"] = -100
+
+        errors = self.update_results(change)
+
+        self.assertTrue(
+            any("Invalid or missing annual energy value" in e
+                for e in errors)
+        )
+
+    def test_missing_energy_end_use(self):
+        def change(data):
+            del data["results"]["annual_energy"]["cooling_kwh"]
+
+        errors = self.update_results(change)
+
+        self.assertTrue(
+            any("cooling_kwh" in e for e in errors)
+        )
+
+    def test_invalid_eri_score(self):
+        def change(data):
+            data["results"]["eri_score"] = "invalid"
+
+        errors = self.update_results(change)
+
+        self.assertTrue(
+            any("Invalid or missing eri_score" in e for e in errors)
+        )
+
+    def test_missing_design_load(self):
+        def change(data):
+            del data["results"]["design_loads"]["heating_btuh"]
+
+        errors = self.update_results(change)
+
+        self.assertTrue(
+            any("heating_btuh" in e for e in errors)
+        )
+
 if __name__ == "__main__":
     unittest.main()
