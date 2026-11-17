@@ -1,0 +1,24 @@
+# B.E.E.P. Software Consistency Repository
+# Code Ownership and Technical Review
+
+# Temporary repository administrator ownership.
+# Replace with an authorized B.E.E.P. technical
+# review team when that team is established.
+
+# Reference home specifications
+/test-homes/ @GoBEEP2026
+
+# Reference home approval records
+/approvals/ @GoBEEP2026
+
+# Reference home governance documents
+/docs/reference-home-approval-policy.md @GoBEEP2026
+/docs/reference-home-versioning.md @GoBEEP2026
+
+# Validation systems
+/vendor-submissions/ @GoBEEP2026
+/comparison-engine/ @GoBEEP2026
+/hpxml-parser/ @GoBEEP2026
+
+# GitHub workflow configuration
+/.github/workflows/ @GoBEEP2026
