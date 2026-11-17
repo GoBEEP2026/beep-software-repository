@@ -599,6 +599,59 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             any("not uniquely registered" in e for e in errors)
         )
 
+    def test_production_rejects_incomplete_approval(self):
+        registry_source = (
+            Path(__file__).resolve().parent.parent
+            / "test-homes"
+            / "reference-home-registry.json"
+        )
+
+        registry = json.loads(
+            registry_source.read_text(encoding="utf-8")
+        )
+
+        # Claim the registry and home are approved.
+        registry["registry_status"] = "APPROVED"
+        registry["reference_homes"][0]["status"] = "APPROVED"
+
+        # Deliberately provide incomplete approval data.
+        registry["reference_homes"][0]["approval"] = {
+            "approved_by": None,
+            "approval_date": None,
+            "approval_record": None
+        }
+
+        registry["reference_homes"][0]["test_cycles"] = []
+
+        registry_path = self.folder / "incomplete-approval.json"
+
+        registry_path.write_text(
+            json.dumps(registry, indent=2),
+            encoding="utf-8"
+        )
+
+        errors = validate_submission(
+            self.folder,
+            production=True,
+            registry_path=registry_path
+        )
+
+        self.assertTrue(
+            any("Missing approval authority" in e for e in errors)
+        )
+
+        self.assertTrue(
+            any("Invalid approval date" in e for e in errors)
+        )
+
+        self.assertTrue(
+            any("Missing approval record" in e for e in errors)
+        )
+
+        self.assertTrue(
+            any("No assigned test cycles" in e for e in errors)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
