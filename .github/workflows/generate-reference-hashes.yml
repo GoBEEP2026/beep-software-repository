@@ -1,0 +1,31 @@
+name: Generate Reference Home Hashes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-reference-hashes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate reference home hashes
+        run: |
+          python test-homes/generate_reference_hashes.py
+
+      - name: Upload proposed registry
+        uses: actions/upload-artifact@v4
+        with:
+          name: proposed-reference-home-registry
+          path: test-homes/reference-home-registry.json
+          retention-days: 30
