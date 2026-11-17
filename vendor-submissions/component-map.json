@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "submission_id": "BEEP-TEST-001",
+  "test_home_id": "BEEP-HOME-001",
+  "component_mappings": [
+    {
+      "reference_component_id": "BEEP-HOME-001-WALL-NORTH-01",
+      "vendor_component_id": "Wall-North-01",
+      "component_type": "Wall",
+      "mapping_method": "REFERENCE_ID",
+      "properties": {
+        "area_ft2": 200,
+        "azimuth_degrees": 0
+      }
+    }
+  ],
+  "mapping_status": "SAMPLE_DATA",
+  "notes": "Illustrative component mapping for development testing only."
+}
