@@ -500,6 +500,16 @@ class TestVendorSubmissionValidator(unittest.TestCase):
         registry["registry_status"] = "APPROVED"
         registry["reference_homes"][0]["status"] = "APPROVED"
 
+        registry["reference_homes"][0]["approval"] = {
+            "approved_by": "BEEP Test Approval Authority",
+            "approval_date": "2026-11-17",
+            "approval_record": "TEST-APPROVAL-001"
+        }
+
+        registry["reference_homes"][0]["test_cycles"] = [
+            "TEST-CYCLE-001"
+        ]
+
         registry_path = self.folder / "test-registry.json"
         registry_path.write_text(
             json.dumps(registry, indent=2),
