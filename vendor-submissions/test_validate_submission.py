@@ -517,6 +517,78 @@ class TestVendorSubmissionValidator(unittest.TestCase):
         self.assertEqual(errors, [])
 
 
+    def test_unknown_reference_home_rejected(self):
+        def change(data):
+            data["test"]["test_home_id"] = "UNKNOWN-HOME"
+
+        errors = self.update_json_file("submission.json", change)
+
+        self.assertTrue(
+            any("not uniquely registered" in e for e in errors)
+        )
+
+    def test_incorrect_reference_home_version_rejected(self):
+        def change(data):
+            data["test"]["test_home_version"] = "99.0.0"
+
+        errors = self.update_json_file("submission.json", change)
+
+        self.assertTrue(
+            any("not uniquely registered" in e for e in errors)
+        )
+
+    def test_unauthorized_reference_compliance_path(self):
+        def change(data):
+            data["test"]["compliance_path"] = "OTHER"
+
+        errors = self.update_json_file("submission.json", change)
+
+        self.assertTrue(
+            any("Compliance path not authorized" in e
+                for e in errors)
+        )
+
+    def test_unapproved_reference_home_rejected_in_production(self):
+        errors = validate_submission(
+            self.folder,
+            production=True
+        )
+
+        self.assertTrue(
+            any("Reference home is not approved" in e
+                for e in errors)
+        )
+
+    def test_duplicate_reference_home_registry_entry(self):
+        registry_source = (
+            Path(__file__).resolve().parent.parent
+            / "test-homes"
+            / "reference-home-registry.json"
+        )
+
+        registry = json.loads(
+            registry_source.read_text(encoding="utf-8")
+        )
+
+        registry["reference_homes"].append(
+            registry["reference_homes"][0].copy()
+        )
+
+        registry_path = self.folder / "duplicate-registry.json"
+        registry_path.write_text(
+            json.dumps(registry, indent=2),
+            encoding="utf-8"
+        )
+
+        errors = validate_submission(
+            self.folder,
+            registry_path=registry_path
+        )
+
+        self.assertTrue(
+            any("not uniquely registered" in e for e in errors)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
