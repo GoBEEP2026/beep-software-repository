@@ -93,6 +93,117 @@ def validate_energy_results(document):
     return errors
 
 
+def validate_component_mappings(document, xml_path):
+    errors = []
+
+    mappings = document.get("component_mappings")
+    if not isinstance(mappings, list):
+        return ["Missing or invalid component_mappings"]
+
+    tree = ET.parse(xml_path)
+    root = tree.getroot()
+
+    walls = {}
+
+    for wall in root.findall(".//{*}Wall"):
+        identifier = wall.find("{*}SystemIdentifier")
+
+        if identifier is None:
+            continue
+
+        wall_id = identifier.get("id")
+        if not wall_id:
+            continue
+
+        walls.setdefault(wall_id, []).append(wall)
+
+    reference_ids = set()
+    vendor_ids = set()
+
+    for index, mapping in enumerate(mappings):
+        if not isinstance(mapping, dict):
+            errors.append(f"Invalid component mapping at index {index}")
+            continue
+
+        reference_id = mapping.get("reference_component_id")
+        vendor_id = mapping.get("vendor_component_id")
+        component_type = mapping.get("component_type")
+
+        if not isinstance(reference_id, str) or not reference_id:
+            errors.append(f"Missing reference component ID at index {index}")
+            continue
+
+        if not isinstance(vendor_id, str) or not vendor_id:
+            errors.append(f"Missing vendor component ID at index {index}")
+            continue
+
+        if reference_id in reference_ids:
+            errors.append(f"Duplicate reference component ID: {reference_id}")
+
+        if vendor_id in vendor_ids:
+            errors.append(f"Duplicate vendor component ID: {vendor_id}")
+
+        reference_ids.add(reference_id)
+        vendor_ids.add(vendor_id)
+
+        if component_type != "Wall":
+            errors.append(
+                f"Unsupported component type: {component_type}"
+            )
+            continue
+
+        matches = walls.get(vendor_id, [])
+
+        if len(matches) != 1:
+            errors.append(
+                f"Expected one HPXML wall for {vendor_id}; "
+                f"found {len(matches)}"
+            )
+            continue
+
+        wall = matches[0]
+        properties = mapping.get("properties")
+
+        if not isinstance(properties, dict):
+            errors.append(f"Missing mapping properties: {vendor_id}")
+            continue
+
+        for xml_field, map_field in [
+            ("Area", "area_ft2"),
+            ("Azimuth", "azimuth_degrees"),
+        ]:
+            xml_element = wall.find(f"{{*}}{xml_field}")
+            mapped_value = properties.get(map_field)
+
+            try:
+                xml_value = float(xml_element.text)
+                mapped_value = float(mapped_value)
+
+                if not (
+                    math.isfinite(xml_value)
+                    and math.isfinite(mapped_value)
+                    and math.isclose(
+                        xml_value,
+                        mapped_value,
+                        rel_tol=1e-6,
+                        abs_tol=0.01
+                    )
+                ):
+                    errors.append(
+                        f"Component geometry mismatch: "
+                        f"{vendor_id} {map_field}"
+                    )
+
+            except (TypeError, ValueError, AttributeError):
+                errors.append(
+                    f"Invalid component geometry: "
+                    f"{vendor_id} {map_field}"
+                )
+
+    return errors
+
+
+
 
 def validate_submission(folder):
     folder = Path(folder)
@@ -175,12 +286,22 @@ def validate_submission(folder):
                     f"Manifest must list {filename} exactly once"
                 )
 
+    
     # Validate energy modeling results
     errors.extend(
         validate_energy_results(documents["results.json"])
     )
 
+    # Validate component mappings against submitted HPXML
+    errors.extend(
+        validate_component_mappings(
+            documents["component-map.json"],
+            folder / "building.xml"
+        )
+    )
+
     return errors
+
 
 
 
