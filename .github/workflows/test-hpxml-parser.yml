@@ -106,5 +106,8 @@ jobs:
           print("Comparison engine passed: 2 differences found.")
           PY
 
+      - name: Verify geometry-based component matching
+        run: python comparison-engine/test_component_matcher.py
+
       - name: Verify component ordering
         run: python comparison-engine/test_component_order.py
