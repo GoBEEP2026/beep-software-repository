@@ -312,6 +312,78 @@ def validate_json_schemas(documents, folder):
     return errors
 
 
+def validate_reference_home(documents, production=False):
+    errors = []
+
+    registry_path = (
+        Path(__file__).resolve().parent.parent
+        / "test-homes"
+        / "reference-home-registry.json"
+    )
+
+    try:
+        with registry_path.open(encoding="utf-8") as f:
+            registry = json.load(f)
+    except (OSError, ValueError) as exc:
+        return [f"Unable to load reference home registry: {exc}"]
+
+    submission = documents["submission.json"]
+    test = submission.get("test", {})
+
+    if not isinstance(test, dict):
+        return ["Invalid submission test metadata"]
+
+    home_id = test.get("test_home_id")
+    home_version = test.get("test_home_version")
+    compliance_path = test.get("compliance_path")
+
+    homes = registry.get("reference_homes")
+
+    if not isinstance(homes, list):
+        return ["Invalid reference home registry"]
+
+    matches = [
+        home for home in homes
+        if isinstance(home, dict)
+        and home.get("test_home_id") == home_id
+        and home.get("test_home_version") == home_version
+    ]
+
+    if len(matches) != 1:
+        errors.append(
+            f"Reference home/version not uniquely registered: "
+            f"{home_id} / {home_version}"
+        )
+        return errors
+
+    home = matches[0]
+
+    approved_paths = home.get("approved_compliance_paths", [])
+
+    if (
+        not isinstance(approved_paths, list)
+        or compliance_path not in approved_paths
+    ):
+        errors.append(
+            f"Compliance path not authorized for reference home: "
+            f"{compliance_path}"
+        )
+
+    if production:
+        if registry.get("registry_status") != "APPROVED":
+            errors.append(
+                "Production requires an approved reference home registry"
+            )
+
+        if home.get("status") != "APPROVED":
+            errors.append(
+                f"Reference home is not approved for production: {home_id}"
+            )
+
+    return errors
+
+
+
 
 def validate_production_requirements(documents):
     errors = []
@@ -486,12 +558,19 @@ def validate_submission(folder, production=False):
         validate_json_schemas(documents, folder)
     )
 
-    # Apply additional requirements to production submissions.
+    
+    # Verify reference home identity, version, and approval.
+    errors.extend(
+        validate_reference_home(
+            documents,
+            production=production
+        )
+    )
+
     if production:
         errors.extend(
             validate_production_requirements(documents)
         )
-
 
     return errors
 
