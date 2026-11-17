@@ -1,0 +1,32 @@
+name: Validate Vendor Submission
+
+on:
+  push:
+    paths:
+      - "vendor-submissions/**"
+      - ".github/workflows/validate-vendor-submission.yml"
+  pull_request:
+    paths:
+      - "vendor-submissions/**"
+      - ".github/workflows/validate-vendor-submission.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-submission:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate sample vendor submission
+        run: |
+          python vendor-submissions/validate_submission.py vendor-submissions
