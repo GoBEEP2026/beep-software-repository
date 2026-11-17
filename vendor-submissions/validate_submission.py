@@ -313,6 +313,7 @@ def validate_json_schemas(documents, folder):
 
 
 
+
 def validate_reference_home(
     documents, production=False, registry_path=None
 ):
@@ -327,10 +328,6 @@ def validate_reference_home(
 
     registry_path = Path(registry_path)
 
-        Path(__file__).resolve().parent.parent
-        / "test-homes"
-        / "reference-home-registry.json"
-    )
 
     try:
         with registry_path.open(encoding="utf-8") as f:
