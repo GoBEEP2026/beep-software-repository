@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "submission_id": "BEEP-TEST-001",
+  "test_home_id": "BEEP-HOME-001",
+  "results": {
+    "eri_score": 52,
+    "annual_energy": {
+      "total_site_kwh": 14500,
+      "heating_kwh": 3200,
+      "cooling_kwh": 4100,
+      "water_heating_kwh": 2600,
+      "lighting_kwh": 1200,
+      "appliances_kwh": 2200,
+      "other_kwh": 1200
+    },
+    "design_loads": {
+      "heating_btuh": 28500,
+      "cooling_btuh": 24000
+    }
+  },
+  "calculation_status": "SAMPLE_DATA",
+  "notes": "Illustrative test values only. Not actual OpenStudio-ERI simulation results."
+}
