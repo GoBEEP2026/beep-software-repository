@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gobeep.org/schemas/component-map.schema.json",
+  "title": "B.E.E.P. Component Mapping",
+  "description": "Standardized component mapping for vendor energy modeling submissions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "submission_id",
+    "test_home_id",
+    "component_mappings",
+    "mapping_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "submission_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "test_home_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "component_mappings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reference_component_id",
+          "vendor_component_id",
+          "component_type",
+          "mapping_method",
+          "properties"
+        ],
+        "properties": {
+          "reference_component_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "vendor_component_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "component_type": {
+            "type": "string",
+            "enum": ["Wall"]
+          },
+          "mapping_method": {
+            "type": "string",
+            "enum": [
+              "REFERENCE_ID",
+              "GEOMETRY",
+              "MANUAL_REVIEW"
+            ]
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "area_ft2",
+              "azimuth_degrees"
+            ],
+            "properties": {
+              "area_ft2": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "azimuth_degrees": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMaximum": 360
+              }
+            }
+          }
+        }
+      }
+    },
+    "mapping_status": {
+      "type": "string",
+      "enum": [
+        "SAMPLE_DATA",
+        "SUBMITTED",
+        "REVIEWED"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}
