@@ -167,6 +167,85 @@ class TestVendorSubmissionValidator(unittest.TestCase):
         self.assertTrue(
             any("heating_btuh" in e for e in errors)
         )
+       
+    def update_component_map(self, change):
+        path = self.folder / "component-map.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        change(data)
+        path.write_text(
+            json.dumps(data, indent=2),
+            encoding="utf-8"
+        )
+        return validate_submission(self.folder)
+
+    def test_nonexistent_wall_id(self):
+        def change(data):
+            data["component_mappings"][0][
+                "vendor_component_id"
+            ] = "WALL-DOES-NOT-EXIST"
+
+        errors = self.update_component_map(change)
+
+        self.assertTrue(
+            any("Expected one HPXML wall" in e for e in errors)
+        )
+
+    def test_duplicate_wall_mapping(self):
+        def change(data):
+            data["component_mappings"].append(
+                data["component_mappings"][0].copy()
+            )
+
+        errors = self.update_component_map(change)
+
+        self.assertTrue(
+            any("Duplicate reference component ID" in e
+                for e in errors)
+        )
+        self.assertTrue(
+            any("Duplicate vendor component ID" in e
+                for e in errors)
+        )
+
+    def test_incorrect_wall_area(self):
+        def change(data):
+            data["component_mappings"][0][
+                "properties"
+            ]["area_ft2"] = 250
+
+        errors = self.update_component_map(change)
+
+        self.assertTrue(
+            any("Component geometry mismatch" in e
+                for e in errors)
+        )
+
+    def test_incorrect_wall_azimuth(self):
+        def change(data):
+            data["component_mappings"][0][
+                "properties"
+            ]["azimuth_degrees"] = 90
+
+        errors = self.update_component_map(change)
+
+        self.assertTrue(
+            any("Component geometry mismatch" in e
+                for e in errors)
+        )
+
+    def test_unsupported_component_type(self):
+        def change(data):
+            data["component_mappings"][0][
+                "component_type"
+            ] = "Roof"
+
+        errors = self.update_component_map(change)
+
+        self.assertTrue(
+            any("Unsupported component type" in e
+                for e in errors)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
