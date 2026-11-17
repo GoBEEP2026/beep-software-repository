@@ -19,6 +19,36 @@ def load_parser():
 
     return module
 
+def normalize_components(data):
+    """
+    Sort component lists by stable identifiers when available.
+    This prevents false differences caused by XML element order.
+    """
+    if isinstance(data, dict):
+        return {
+            key: normalize_components(value)
+            for key, value in data.items()
+        }
+
+    if isinstance(data, list):
+        normalized = [
+            normalize_components(item)
+            for item in data
+        ]
+
+        if normalized and all(
+            isinstance(item, dict) and item.get("id")
+            for item in normalized
+        ):
+            return sorted(
+                normalized,
+                key=lambda item: str(item["id"])
+            )
+
+        return normalized
+
+    return data
+
 
 def flatten(data, prefix=""):
     """Convert nested dictionaries and lists into comparable fields."""
@@ -43,8 +73,8 @@ def flatten(data, prefix=""):
 def compare_files(file_a, file_b):
     parser = load_parser()
 
-    data_a = flatten(parser.parse_hpxml(file_a))
-    data_b = flatten(parser.parse_hpxml(file_b))
+    data_a = flatten(normalize_components(parser.parse_hpxml(file_a)))
+    data_b = flatten(normalize_components(parser.parse_hpxml(file_b)))
 
     differences = []
 
