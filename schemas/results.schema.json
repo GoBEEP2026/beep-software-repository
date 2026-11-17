@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gobeep.org/schemas/results.schema.json",
+  "title": "B.E.E.P. Energy Modeling Results",
+  "description": "Standardized energy modeling outputs for development testing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "submission_id",
+    "test_home_id",
+    "results",
+    "calculation_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "submission_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "test_home_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eri_score",
+        "annual_energy",
+        "design_loads"
+      ],
+      "properties": {
+        "eri_score": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Reported Energy Rating Index score."
+        },
+        "annual_energy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "total_site_kwh",
+            "heating_kwh",
+            "cooling_kwh",
+            "water_heating_kwh",
+            "lighting_kwh",
+            "appliances_kwh",
+            "other_kwh"
+          ],
+          "properties": {
+            "total_site_kwh": {
+              "type": "number",
+              "minimum": 0
+            },
+            "heating_kwh": {
+              "type": "number",
+              "minimum": 0
+            },
+            "cooling_kwh": {
+              "type": "number",
+              "minimum": 0
+            },
+            "water_heating_kwh": {
+              "type": "number",
+              "minimum": 0
+            },
+            "lighting_kwh": {
+              "type": "number",
+              "minimum": 0
+            },
+            "appliances_kwh": {
+              "type": "number",
+              "minimum": 0
+            },
+            "other_kwh": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "design_loads": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "heating_btuh",
+            "cooling_btuh"
+          ],
+          "properties": {
+            "heating_btuh": {
+              "type": "number",
+              "minimum": 0
+            },
+            "cooling_btuh": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "calculation_status": {
+      "type": "string",
+      "enum": [
+        "SAMPLE_DATA",
+        "COMPLETED",
+        "FAILED"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}
