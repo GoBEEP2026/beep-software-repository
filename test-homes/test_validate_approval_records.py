@@ -141,6 +141,24 @@ class TestApprovalRecords(unittest.TestCase):
             any("marked NOT APPROVED" in e for e in errors)
         )
 
+    def test_missing_approval_decision_rejected(self):
+        self.record_path.write_text(
+            self.valid_record().replace(
+                "Approval Status: APPROVED\n",
+                ""
+            ),
+            encoding="utf-8"
+        )
+
+        errors = self.validate()
+
+        self.assertTrue(
+            any(
+                "must explicitly state APPROVED" in e
+                for e in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
