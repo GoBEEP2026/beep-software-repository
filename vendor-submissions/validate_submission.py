@@ -87,10 +87,7 @@ def validate_energy_results(document):
                     f"Invalid or missing design load: {field}"
                 )
 
-    # Validate energy modeling results
-    errors.extend(
-        validate_energy_results(documents["results.json"])
-    )
+
 
 
     return errors
@@ -172,12 +169,19 @@ def validate_submission(folder):
             if filename == "manifest.json":
                 continue
 
+            
             if listed.count(filename) != 1:
                 errors.append(
                     f"Manifest must list {filename} exactly once"
                 )
 
+    # Validate energy modeling results
+    errors.extend(
+        validate_energy_results(documents["results.json"])
+    )
+
     return errors
+
 
 
 if __name__ == "__main__":
@@ -197,4 +201,5 @@ if __name__ == "__main__":
 
     print("B.E.E.P. SUBMISSION VALIDATION PASSED")
     print("Required files, JSON/XML syntax, and IDs verified.")
-    print("Schema, energy, component, and hash checks pending.")
+    print("Energy results validation completed.")
+    print("Schema, component, and hash checks pending.")
