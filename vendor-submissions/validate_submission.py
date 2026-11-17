@@ -262,8 +262,15 @@ def validate_file_integrity(manifest, folder):
 
 
 def validate_json_schemas(documents, folder):
+  
     errors = []
-    schema_folder = Path(folder).resolve().parent / "schemas"
+
+    # Locate schemas relative to this validator script,
+    # not the temporary vendor submission directory.
+    schema_folder = (
+        Path(__file__).resolve().parent.parent / "schemas"
+    )
+
 
     schema_files = {
         "submission.json": "submission.schema.json",
