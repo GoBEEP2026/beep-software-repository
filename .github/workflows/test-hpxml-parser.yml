@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
+      - "comparison-engine/**"
       - "hpxml-parser/**"
       - "test-homes/**"
       - ".github/workflows/test-hpxml-parser.yml"
@@ -71,6 +72,35 @@ jobs:
           assert len(result["windows"]) == 1
           assert result["windows"][0]["u_factor"] == "0.30"
           assert result["windows"][0]["shgc"] == "0.25"
+
+      - name: Verify HPXML comparison engine
+        shell: bash
+        run: |
+          python - <<'PY'
+          import importlib.util
+
+          spec = importlib.util.spec_from_file_location(
+              "compare", "comparison-engine/compare.py"
+          )
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          result = module.compare_files(
+              "test-homes/sample-home.xml",
+              "test-homes/sample-home-vendor-b.xml"
+          )
+
+          assert result["differences_found"] == 2, result
+
+          fields = {
+              item["field"] for item in result["differences"]
+          }
+
+          assert "walls[0].nominal_r_value" in fields
+          assert "windows[0].u_factor" in fields
+
+          print("Comparison engine passed: 2 differences found.")
+          PY
 
           print("Advanced HPXML parser tests passed.")
           PY
