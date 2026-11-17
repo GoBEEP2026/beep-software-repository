@@ -12,6 +12,9 @@
       <Enclosure>
         <Walls>
           <Wall>
+            <SystemIdentifier id="Wall-North-01"/>
+            <Area>200</Area>
+            <Azimuth>0</Azimuth>
             <Insulation>
               <NominalRValue>15</NominalRValue>
             </Insulation>
