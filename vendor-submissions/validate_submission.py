@@ -5,6 +5,7 @@ import math
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+import importlib.util
 
 REQUIRED_FILES = [
     "submission.json",
@@ -312,6 +313,35 @@ def validate_json_schemas(documents, folder):
     return errors
 
 
+def validate_reference_approval_metadata(registry_path):
+    """
+    Run the B.E.E.P. reference-home approval validator
+    against the selected registry.
+    """
+
+    validator_path = (
+        Path(__file__).resolve().parent.parent
+        / "test-homes"
+        / "validate_reference_approval.py"
+    )
+
+    spec = importlib.util.spec_from_file_location(
+        "beep_reference_approval",
+        validator_path
+    )
+
+    if spec is None or spec.loader is None:
+        return ["Unable to load reference approval validator"]
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module.validate_reference_approval(
+        registry_path=registry_path
+    )
+
+
+
 
 
 def validate_reference_home(
@@ -387,6 +417,13 @@ def validate_reference_home(
             errors.append(
                 f"Reference home is not approved for production: {home_id}"
             )
+
+        # Verify approval metadata for production use.
+        errors.extend(
+            validate_reference_approval_metadata(
+                registry_path
+            )
+        )
 
     return errors
 
