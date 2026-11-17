@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gobeep.org/schemas/manifest.schema.json",
+  "title": "B.E.E.P. Vendor Submission Manifest",
+  "description": "File inventory and integrity metadata for vendor submissions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "submission_id",
+    "test_home_id",
+    "manifest_status",
+    "hash_algorithm",
+    "files",
+    "validation"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "submission_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "test_home_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "manifest_status": {
+      "type": "string",
+      "enum": [
+        "DEVELOPMENT_SAMPLE",
+        "CHECKSUMS_GENERATED"
+      ]
+    },
+    "hash_algorithm": {
+      "const": "SHA-256"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "filename",
+          "required",
+          "sha256"
+        ],
+        "properties": {
+          "filename": {
+            "type": "string",
+            "enum": [
+              "submission.json",
+              "building.xml",
+              "results.json",
+              "component-map.json"
+            ]
+          },
+          "required": {
+            "const": true
+          },
+          "sha256": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "files_verified",
+        "checksums_verified",
+        "validation_status"
+      ],
+      "properties": {
+        "files_verified": {
+          "type": "boolean"
+        },
+        "checksums_verified": {
+          "type": "boolean"
+        },
+        "validation_status": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "PASSED",
+            "FAILED"
+          ]
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "manifest_status": {
+            "const": "CHECKSUMS_GENERATED"
+          }
+        },
+        "required": ["manifest_status"]
+      },
+      "then": {
+        "properties": {
+          "files": {
+            "items": {
+              "properties": {
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
