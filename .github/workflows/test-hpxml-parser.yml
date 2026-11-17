@@ -1,0 +1,50 @@
+
+name: Test HPXML Parser
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "hpxml-parser/**"
+      - "test-homes/**"
+      - ".github/workflows/test-hpxml-parser.yml"
+
+jobs:
+  test-parser:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run HPXML parser
+        run: |
+          python hpxml-parser/parser.py test-homes/sample-home.xml
+
+      - name: Verify extracted values
+        run: |
+          python - <<'PY'
+          import importlib.util
+
+          spec = importlib.util.spec_from_file_location(
+              "parser", "hpxml-parser/parser.py"
+          )
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          result = module.parse_hpxml("test-homes/sample-home.xml")
+
+          assert result["conditioned_floor_area"] == ["2200"]
+          assert result["conditioned_volume"] == ["19800"]
+          assert result["number_of_bedrooms"] == ["3"]
+          assert result["insulation_r_value"] == ["15"]
+          assert result["window_u_factor"] == ["0.30"]
+          assert result["window_shgc"] == ["0.25"]
+
+          print("All six HPXML extraction checks passed.")
+          PY
