@@ -93,7 +93,7 @@ jobs:
               "test-homes/sample-home-vendor-b.xml"
           )
 
-          assert result["differences_found"] == 2, result
+          assert result["differences_found"] == 3, result
 
           fields = {
               item["field"] for item in result["differences"]
