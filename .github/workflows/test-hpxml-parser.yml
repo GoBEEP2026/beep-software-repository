@@ -102,5 +102,8 @@ jobs:
           assert "walls[0].nominal_r_value" in fields
           assert "windows[0].u_factor" in fields
 
+      - name: Verify component ordering
+        run: python comparison-engine/test_component_order.py
+
           print("Comparison engine passed: 2 differences found.")
           PY
