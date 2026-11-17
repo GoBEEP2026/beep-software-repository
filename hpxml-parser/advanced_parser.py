@@ -39,24 +39,25 @@ def elements(root, name):
     ]
 
 
+
 def extract_components(root, name, fields):
     """Extract individual components with their own properties."""
     results = []
 
     for item in elements(root, name):
-        
         identifier = child(item, "SystemIdentifier")
 
         record = {
             "id": identifier.get("id") if identifier is not None else None
         }
 
-            for field, path in fields.items():
+        for field, path in fields.items():
             record[field] = value(item, path)
 
         results.append(record)
 
     return results
+
 
 
 def parse_hpxml(file_path):
