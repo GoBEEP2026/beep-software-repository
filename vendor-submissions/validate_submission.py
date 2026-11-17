@@ -45,12 +45,24 @@ def validate_submission(folder):
     if errors:
         return errors
 
+    
     # Compare submission IDs and test home IDs
     for field in ("submission_id", "test_home_id"):
-        values = {
-            filename: document.get(field)
-            for filename, document in documents.items()
-        }
+        values = {}
+
+        for filename, document in documents.items():
+            if filename == "submission.json" and field == "test_home_id":
+                test_metadata = document.get("test", {})
+                value = (
+                    test_metadata.get("test_home_id")
+                    if isinstance(test_metadata, dict)
+                    else None
+                )
+            else:
+                value = document.get(field)
+
+            values[filename] = value
+
 
         if any(not isinstance(value, str) or not value.strip()
                for value in values.values()):
