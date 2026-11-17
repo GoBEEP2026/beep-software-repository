@@ -44,13 +44,14 @@ def extract_components(root, name, fields):
     results = []
 
     for item in elements(root, name):
-        record = {
-           "id": (
-    child(item, "SystemIdentifier").get("id")
-    if child(item, "SystemIdentifier") is not None
-    else None
+        
+        identifier = child(item, "SystemIdentifier")
 
-        for field, path in fields.items():
+        record = {
+            "id": identifier.get("id") if identifier is not None else None
+        }
+
+            for field, path in fields.items():
             record[field] = value(item, path)
 
         results.append(record)
