@@ -112,5 +112,22 @@ jobs:
       - name: Verify integrated HPXML comparison
         run: python comparison-engine/test_integrated_compare.py
 
+      - name: Verify JSON comparison report
+        run: python comparison-engine/test_report_generator.py
+
+      - name: Generate sample comparison report
+        run: |
+          python comparison-engine/report_generator.py \
+            test-homes/sample-home.xml \
+            test-homes/sample-home-vendor-b.xml \
+            reports/sample-comparison.json
+
+      - name: Upload comparison report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-comparison-report
+          path: reports/sample-comparison.json
+          retention-days: 30
+
       - name: Verify component ordering
         run: python comparison-engine/test_component_order.py
