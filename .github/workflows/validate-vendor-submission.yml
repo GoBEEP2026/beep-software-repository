@@ -1,15 +1,30 @@
 name: Validate Vendor Submission
 
+
+name: Validate Vendor Submission
+
 on:
   push:
-    paths:
-      - "vendor-submissions/**"
-      - ".github/workflows/validate-vendor-submission.yml"
+    branches:
+      - main
+
   pull_request:
-    paths:
-      - "vendor-submissions/**"
-      - ".github/workflows/validate-vendor-submission.yml"
+    branches:
+      - main
+
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-submission:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
 
 permissions:
   contents: read
