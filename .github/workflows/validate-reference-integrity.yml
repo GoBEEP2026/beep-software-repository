@@ -1,17 +1,17 @@
 name: Validate Reference Home Integrity
 
+
 on:
   push:
-    paths:
-      - "test-homes/**"
-      - ".github/workflows/validate-reference-integrity.yml"
+    branches:
+      - main
 
   pull_request:
-    paths:
-      - "test-homes/**"
-      - ".github/workflows/validate-reference-integrity.yml"
+    branches:
+      - main
 
   workflow_dispatch:
+
 
 permissions:
   contents: read
