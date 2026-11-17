@@ -1,0 +1,1 @@
+Standardized reference home specifications.
