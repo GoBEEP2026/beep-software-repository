@@ -145,13 +145,28 @@ def validate_approval_records(
                     f"mismatched {field}"
                 )
 
-        if re.search(
-            r"(?im)^\s*(?:\*\*)?Approval Status:"
-            r"(?:\*\*)?\s*NOT APPROVED\s*$",
-            content
-        ):
+        
+        # Require an explicit approval decision.
+        approved_pattern = (
+            r"(?im)^\s*(?:-\s*)?(?:\*\*)?"
+            r"Approval Status:(?:\*\*)?\s*"
+            r"APPROVED\s*$"
+        )
+
+        not_approved_pattern = (
+            r"(?im)^\s*(?:-\s*)?(?:\*\*)?"
+            r"Approval Status:(?:\*\*)?\s*"
+            r"NOT APPROVED\s*$"
+        )
+
+        if re.search(not_approved_pattern, content):
             errors.append(
                 f"{prefix}: Approval document is marked NOT APPROVED"
+            )
+        elif not re.search(approved_pattern, content):
+            errors.append(
+                f"{prefix}: Approval document must explicitly "
+                f"state APPROVED"
             )
 
     return errors
