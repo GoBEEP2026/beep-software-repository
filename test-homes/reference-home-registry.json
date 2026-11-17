@@ -12,12 +12,14 @@
       "conditioned_floor_area_ft2": 2200,
       "conditioned_volume_ft3": 19800,
       "bedrooms": 3,
-      "reference_files": [
-        {
-          "filename": "sample-home.xml",
-          "sha256": null
-        }
-      ],
+     
+"reference_files": [
+  {
+    "filename": "sample-home.xml",
+    "sha256": "a343045abc6b7f903b14fc8dc59b985b80d8cc67e22a52f29d45f999b1fb910b"
+  }
+],
+
       "approved_compliance_paths": [
         "ERI",
         "R405"
