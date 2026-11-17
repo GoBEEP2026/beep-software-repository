@@ -444,15 +444,21 @@ def validate_reference_home(
                 f"Reference home is not approved for production: {home_id}"
             )
 
-        # Verify approval metadata for production use.
-        errors.extend(
-            validate_reference_approval_metadata(
-                registry_path
+       
+            # Verify approval metadata for production use.
+            errors.extend(
+                validate_reference_approval_metadata(
+                    registry_path
+                )
             )
-        
-        errors.extend(
-            validate_reference_approval_records(registry_path)
+
+            # Verify the approval document.
+            errors.extend(
+                validate_reference_approval_records(
+                    registry_path
+                )
             )
+
 
 
     return errors
