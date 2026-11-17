@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gobeep.org/schemas/submission.schema.json",
+  "title": "B.E.E.P. Vendor Submission Metadata",
+  "description": "Standardized metadata for vendor energy modeling submissions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "submission_id",
+    "vendor",
+    "software",
+    "test",
+    "files"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "submission_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "vendor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vendor_id", "vendor_name"],
+      "properties": {
+        "vendor_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "vendor_name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "software": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product_name",
+        "product_version",
+        "engine",
+        "engine_version"
+      ],
+      "properties": {
+        "product_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "product_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "engine": {
+          "type": "string",
+          "minLength": 1
+        },
+        "engine_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "test_home_id",
+        "test_home_version",
+        "test_cycle",
+        "compliance_path"
+      ],
+      "properties": {
+        "test_home_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "test_home_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "test_cycle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "compliance_path": {
+          "type": "string",
+          "enum": ["ERI", "R405", "OTHER"]
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "building",
+        "results",
+        "component_map",
+        "manifest"
+      ],
+      "properties": {
+        "building": {
+          "const": "building.xml"
+        },
+        "results": {
+          "const": "results.json"
+        },
+        "component_map": {
+          "const": "component-map.json"
+        },
+        "manifest": {
+          "const": "manifest.json"
+        }
+      }
+    }
+  }
+}
