@@ -636,21 +636,33 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             registry_path=registry_path
         )
 
+        
         self.assertTrue(
-            any("Missing approval authority" in e for e in errors)
+            any("Missing approval authority" in e for e in errors),
+            f"Actual validation errors: {errors}"
         )
 
+
+        
         self.assertTrue(
-            any("Invalid approval date" in e for e in errors)
+            any("Invalid approval date" in e for e in errors),
+            f"Actual validation errors: {errors}"
         )
 
+
+        
         self.assertTrue(
-            any("Missing approval record" in e for e in errors)
+            any("Missing approval record" in e for e in errors),
+            f"Actual validation errors: {errors}"
         )
 
+
+       
         self.assertTrue(
-            any("No assigned test cycles" in e for e in errors)
+            any("No assigned test cycles" in e for e in errors),
+            f"Actual validation errors: {errors}"
         )
+
 
 
 if __name__ == "__main__":
