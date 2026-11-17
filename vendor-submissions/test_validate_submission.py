@@ -553,6 +553,57 @@ class TestVendorSubmissionValidator(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+    def test_production_rejects_missing_approval_document(self):
+        registry_source = (
+            Path(__file__).resolve().parent.parent
+            / "test-homes"
+            / "reference-home-registry.json"
+        )
+
+        registry = json.loads(
+            registry_source.read_text(encoding="utf-8")
+        )
+
+        # Set up a simulated approved reference home.
+        registry["registry_status"] = "APPROVED"
+
+        home = registry["reference_homes"][0]
+        home["status"] = "APPROVED"
+
+        home["approval"] = {
+            "approved_by": "BEEP Test Approval Authority",
+            "approval_date": "2026-11-17",
+            "approval_record": "TEST-APPROVAL-001"
+        }
+
+        home["test_cycles"] = ["TEST-CYCLE-001"]
+
+        registry_path = self.folder / "test-registry.json"
+
+        registry_path.write_text(
+            json.dumps(registry, indent=2),
+            encoding="utf-8"
+        )
+
+        # Use an empty temporary approval directory.
+        approvals_directory = self.folder / "empty-approvals"
+        approvals_directory.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
+        errors = validate_submission(
+            self.folder,
+            production=True,
+            registry_path=registry_path,
+            approvals_directory=approvals_directory
+        )
+
+        self.assertTrue(
+            any("Missing approval document" in e for e in errors),
+            f"Actual validation errors: {errors}"
+        )
+
 
     def test_unknown_reference_home_rejected(self):
         def change(data):
