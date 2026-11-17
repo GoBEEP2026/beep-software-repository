@@ -325,6 +325,88 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             any("Invalid SHA-256 checksum" in e for e in errors)
         )
 
+    def update_json_file(self, filename, change):
+        path = self.folder / filename
+        data = json.loads(path.read_text(encoding="utf-8"))
+
+        change(data)
+
+        path.write_text(
+            json.dumps(data, indent=2),
+            encoding="utf-8"
+        )
+
+        return validate_submission(self.folder)
+
+    def test_schema_missing_vendor_name(self):
+        def change(data):
+            del data["vendor"]["vendor_name"]
+
+        errors = self.update_json_file(
+            "submission.json", change
+        )
+
+        self.assertTrue(
+            any("Schema validation error" in e
+                and "vendor_name" in e for e in errors)
+        )
+
+    def test_schema_invalid_compliance_path(self):
+        def change(data):
+            data["test"]["compliance_path"] = "INVALID"
+
+        errors = self.update_json_file(
+            "submission.json", change
+        )
+
+        self.assertTrue(
+            any("Schema validation error" in e
+                and "compliance_path" in e for e in errors)
+        )
+
+    def test_schema_invalid_energy_type(self):
+        def change(data):
+            data["results"]["annual_energy"][
+                "heating_kwh"
+            ] = "3200"
+
+        errors = self.update_json_file(
+            "results.json", change
+        )
+
+        self.assertTrue(
+            any("Schema validation error" in e
+                and "heating_kwh" in e for e in errors)
+        )
+
+    def test_schema_negative_wall_area(self):
+        def change(data):
+            data["component_mappings"][0][
+                "properties"
+            ]["area_ft2"] = -200
+
+        errors = self.update_json_file(
+            "component-map.json", change
+        )
+
+        self.assertTrue(
+            any("Schema validation error" in e
+                and "area_ft2" in e for e in errors)
+        )
+
+    def test_schema_invalid_manifest_algorithm(self):
+        def change(data):
+            data["hash_algorithm"] = "MD5"
+
+        errors = self.update_json_file(
+            "manifest.json", change
+        )
+
+        self.assertTrue(
+            any("Schema validation error" in e
+                and "hash_algorithm" in e for e in errors)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
