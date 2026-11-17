@@ -1,3 +1,4 @@
+from jsonschema import Draft202012Validator
 import hashlib
 import json
 import math
@@ -260,6 +261,51 @@ def validate_file_integrity(manifest, folder):
 
 
 
+def validate_json_schemas(documents, folder):
+    errors = []
+    schema_folder = Path(folder).resolve().parent / "schemas"
+
+    schema_files = {
+        "submission.json": "submission.schema.json",
+        "results.json": "results.schema.json",
+        "component-map.json": "component-map.schema.json",
+        "manifest.json": "manifest.schema.json",
+    }
+
+    for filename, schema_filename in schema_files.items():
+        schema_path = schema_folder / schema_filename
+
+        try:
+            with schema_path.open(encoding="utf-8") as f:
+                schema = json.load(f)
+
+            Draft202012Validator.check_schema(schema)
+            validator = Draft202012Validator(schema)
+
+            validation_errors = sorted(
+                validator.iter_errors(documents[filename]),
+                key=lambda error: str(list(error.absolute_path))
+            )
+
+            for error in validation_errors:
+                location = ".".join(
+                    str(part) for part in error.absolute_path
+                ) or "root"
+
+                errors.append(
+                    f"Schema validation error in "
+                    f"{filename} at {location}: {error.message}"
+                )
+
+        except (OSError, ValueError) as exc:
+            errors.append(
+                f"Unable to load schema {schema_filename}: {exc}"
+            )
+
+    return errors
+
+
+
 
 
 def validate_submission(folder):
@@ -358,6 +404,7 @@ def validate_submission(folder):
     )
 
 
+ 
     # Verify submission file integrity
     errors.extend(
         validate_file_integrity(
@@ -366,7 +413,13 @@ def validate_submission(folder):
         )
     )
 
+    # Validate all JSON files against formal schemas
+    errors.extend(
+        validate_json_schemas(documents, folder)
+    )
+
     return errors
+
 
 
 if __name__ == "__main__":
