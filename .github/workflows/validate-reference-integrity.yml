@@ -50,3 +50,14 @@ jobs:
             -s test-homes \
             -p "test_validate_reference_approval.py" \
             -v
+
+      - name: Validate reference approval records
+        run: |
+          python test-homes/validate_approval_records.py
+
+      - name: Run approval record unit tests
+        run: |
+          python -m unittest discover \
+            -s test-homes \
+            -p "test_validate_approval_records.py" \
+            -v
