@@ -246,6 +246,85 @@ class TestVendorSubmissionValidator(unittest.TestCase):
                 for e in errors)
         )
 
+    def generate_test_hashes(self):
+        import hashlib
+
+        manifest_path = self.folder / "manifest.json"
+        manifest = json.loads(
+            manifest_path.read_text(encoding="utf-8")
+        )
+
+        for entry in manifest["files"]:
+            filename = entry["filename"]
+            entry["sha256"] = hashlib.sha256(
+                (self.folder / filename).read_bytes()
+            ).hexdigest()
+
+        manifest["manifest_status"] = "CHECKSUMS_GENERATED"
+
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2),
+            encoding="utf-8"
+        )
+
+    def test_valid_checksums(self):
+        self.generate_test_hashes()
+
+        errors = validate_submission(self.folder)
+
+        self.assertEqual(errors, [])
+
+    def test_modified_file_detected(self):
+        self.generate_test_hashes()
+
+        path = self.folder / "building.xml"
+        path.write_bytes(path.read_bytes() + b"\n")
+
+        errors = validate_submission(self.folder)
+
+        self.assertTrue(
+            any("SHA-256 checksum mismatch: building.xml" in e
+                for e in errors)
+        )
+
+    def test_missing_checksum_rejected(self):
+        self.generate_test_hashes()
+
+        path = self.folder / "manifest.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+
+        manifest["files"][0]["sha256"] = None
+
+        path.write_text(
+            json.dumps(manifest, indent=2),
+            encoding="utf-8"
+        )
+
+        errors = validate_submission(self.folder)
+
+        self.assertTrue(
+            any("Missing SHA-256 checksum" in e for e in errors)
+        )
+
+    def test_invalid_checksum_format_rejected(self):
+        self.generate_test_hashes()
+
+        path = self.folder / "manifest.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+
+        manifest["files"][0]["sha256"] = "INVALID-HASH"
+
+        path.write_text(
+            json.dumps(manifest, indent=2),
+            encoding="utf-8"
+        )
+
+        errors = validate_submission(self.folder)
+
+        self.assertTrue(
+            any("Invalid SHA-256 checksum" in e for e in errors)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
