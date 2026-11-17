@@ -30,3 +30,10 @@ jobs:
       - name: Validate sample vendor submission
         run: |
           python vendor-submissions/validate_submission.py vendor-submissions
+
+      - name: Test valid and invalid submissions
+        run: |
+          python -m unittest discover \
+            -s vendor-submissions \
+            -p "test_validate_submission.py" \
+            -v
