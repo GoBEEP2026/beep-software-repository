@@ -464,6 +464,7 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             any("Missing production checksum" in e for e in errors)
         )
 
+
     def test_production_accepts_complete_submission(self):
         submission_path = self.folder / "submission.json"
         submission = json.loads(
@@ -485,11 +486,36 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             encoding="utf-8"
         )
 
+        # Create a temporary approved reference registry.
+        registry_source = (
+            Path(__file__).resolve().parent.parent
+            / "test-homes"
+            / "reference-home-registry.json"
+        )
+
+        registry = json.loads(
+            registry_source.read_text(encoding="utf-8")
+        )
+
+        registry["registry_status"] = "APPROVED"
+        registry["reference_homes"][0]["status"] = "APPROVED"
+
+        registry_path = self.folder / "test-registry.json"
+        registry_path.write_text(
+            json.dumps(registry, indent=2),
+            encoding="utf-8"
+        )
+
         self.generate_test_hashes()
 
-        errors = validate_submission(self.folder, production=True)
+        errors = validate_submission(
+            self.folder,
+            production=True,
+            registry_path=registry_path
+        )
 
         self.assertEqual(errors, [])
+
 
 
 if __name__ == "__main__":
