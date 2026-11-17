@@ -1,3 +1,4 @@
+import hashlib
 import json
 import math
 import sys
@@ -203,6 +204,62 @@ def validate_component_mappings(document, xml_path):
     return errors
 
 
+def validate_file_integrity(manifest, folder):
+    errors = []
+    folder = Path(folder)
+
+    entries = manifest.get("files")
+
+    if not isinstance(entries, list):
+        return ["Invalid manifest file inventory"]
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            errors.append("Invalid manifest file entry")
+            continue
+
+        filename = entry.get("filename")
+        expected_hash = entry.get("sha256")
+
+        if not isinstance(filename, str) or not filename:
+            errors.append("Invalid manifest filename")
+            continue
+
+        if filename not in REQUIRED_FILES or filename == "manifest.json":
+            errors.append(f"Unexpected manifest filename: {filename}")
+            continue
+
+        file_path = folder / filename
+
+        if not file_path.is_file():
+            errors.append(f"Missing file for checksum: {filename}")
+            continue
+
+        # Development samples may not yet have generated hashes.
+        if expected_hash is None:
+            if manifest.get("manifest_status") != "DEVELOPMENT_SAMPLE":
+                errors.append(f"Missing SHA-256 checksum: {filename}")
+            continue
+
+        if (
+            not isinstance(expected_hash, str)
+            or len(expected_hash) != 64
+            or any(c not in "0123456789abcdef" for c in expected_hash)
+        ):
+            errors.append(f"Invalid SHA-256 checksum: {filename}")
+            continue
+
+        actual_hash = hashlib.sha256(
+            file_path.read_bytes()
+        ).hexdigest()
+
+        if actual_hash != expected_hash:
+            errors.append(f"SHA-256 checksum mismatch: {filename}")
+
+    return errors
+
+
+
 
 
 def validate_submission(folder):
@@ -300,12 +357,20 @@ def validate_submission(folder):
         )
     )
 
+
+    # Verify submission file integrity
+    errors.extend(
+        validate_file_integrity(
+            documents["manifest.json"],
+            folder
+        )
+    )
+
     return errors
 
 
-
-
 if __name__ == "__main__":
+
     folder = (
         sys.argv[1]
         if len(sys.argv) > 1
@@ -321,6 +386,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print("B.E.E.P. SUBMISSION VALIDATION PASSED")
-    print("Required files, JSON/XML syntax, and IDs verified.")
-    print("Energy results validation completed.")
-    print("Schema, component, and hash checks pending.")
+    print("Structure, energy results, and component mappings checked.")
+    print("File integrity checks completed.")
+    print("Full schema validation and production controls pending.")
