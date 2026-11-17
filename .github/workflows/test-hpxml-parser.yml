@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "comparison-engine/**"
       - "hpxml-parser/**"
       - "test-homes/**"
+      - "comparison-engine/**"
       - ".github/workflows/test-hpxml-parser.yml"
 
 jobs:
@@ -46,7 +46,7 @@ jobs:
           assert result["window_u_factor"] == ["0.30"]
           assert result["window_shgc"] == ["0.25"]
 
-          print("All six HPXML extraction checks passed.")
+          print("Basic HPXML parser tests passed.")
           PY
 
       - name: Verify advanced HPXML extraction
@@ -72,6 +72,9 @@ jobs:
           assert len(result["windows"]) == 1
           assert result["windows"][0]["u_factor"] == "0.30"
           assert result["windows"][0]["shgc"] == "0.25"
+
+          print("Advanced HPXML parser tests passed.")
+          PY
 
       - name: Verify HPXML comparison engine
         shell: bash
@@ -100,7 +103,4 @@ jobs:
           assert "windows[0].u_factor" in fields
 
           print("Comparison engine passed: 2 differences found.")
-          PY
-
-          print("Advanced HPXML parser tests passed.")
           PY
