@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<HPXML xmlns="http://hpxmlonline.com/2019/10">
+  <Building>
+    <BuildingDetails>
+      <BuildingSummary>
+        <BuildingConstruction>
+          <ConditionedFloorArea>2200</ConditionedFloorArea>
+          <ConditionedBuildingVolume>19800</ConditionedBuildingVolume>
+          <NumberofBedrooms>3</NumberofBedrooms>
+        </BuildingConstruction>
+      </BuildingSummary>
+      <Enclosure>
+        <Walls>
+          <Wall>
+            <Insulation>
+              <NominalRValue>13</NominalRValue>
+            </Insulation>
+          </Wall>
+        </Walls>
+        <Windows>
+          <Window>
+            <UFactor>0.32</UFactor>
+            <SHGC>0.25</SHGC>
+          </Window>
+        </Windows>
+      </Enclosure>
+    </BuildingDetails>
+  </Building>
+</HPXML>
