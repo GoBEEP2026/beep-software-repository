@@ -312,10 +312,21 @@ def validate_json_schemas(documents, folder):
     return errors
 
 
-def validate_reference_home(documents, production=False):
+
+def validate_reference_home(
+    documents, production=False, registry_path=None
+):
     errors = []
 
-    registry_path = (
+    if registry_path is None:
+        registry_path = (
+            Path(__file__).resolve().parent.parent
+            / "test-homes"
+            / "reference-home-registry.json"
+        )
+
+    registry_path = Path(registry_path)
+
         Path(__file__).resolve().parent.parent
         / "test-homes"
         / "reference-home-registry.json"
@@ -448,7 +459,9 @@ def validate_production_requirements(documents):
 
 
 
-def validate_submission(folder, production=False):
+def validate_submission(
+    folder, production=False, registry_path=None
+):
     folder = Path(folder)
     errors = []
 
@@ -560,12 +573,15 @@ def validate_submission(folder, production=False):
 
     
     # Verify reference home identity, version, and approval.
+    
     errors.extend(
         validate_reference_home(
             documents,
-            production=production
+            production=production,
+            registry_path=registry_path
         )
     )
+
 
     if production:
         errors.extend(
