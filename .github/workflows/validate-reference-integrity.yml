@@ -1,0 +1,34 @@
+name: Validate Reference Home Integrity
+
+on:
+  push:
+    paths:
+      - "test-homes/**"
+      - ".github/workflows/validate-reference-integrity.yml"
+
+  pull_request:
+    paths:
+      - "test-homes/**"
+      - ".github/workflows/validate-reference-integrity.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-reference-integrity:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate reference home integrity
+        run: |
+          python test-homes/validate_reference_integrity.py
