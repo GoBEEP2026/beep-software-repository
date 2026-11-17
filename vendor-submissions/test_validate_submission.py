@@ -516,13 +516,40 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             encoding="utf-8"
         )
 
+        # Create a temporary approval document for this test.
+        approvals_directory = self.folder / "approvals"
+
+        approval_path = (
+            approvals_directory
+            / "BEEP-HOME-001"
+            / "1.0.0"
+            / "approval-record.md"
+        )
+
+        approval_path.parent.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
+        approval_path.write_text(
+            "# B.E.E.P. Test Approval Record\n\n"
+            "Reference Home ID: BEEP-HOME-001\n"
+            "Reference Home Version: 1.0.0\n"
+            "Approval Record ID: TEST-APPROVAL-001\n"
+            "Approval Status: APPROVED\n",
+            encoding="utf-8"
+        )
+
         self.generate_test_hashes()
 
+        
         errors = validate_submission(
             self.folder,
             production=True,
-            registry_path=registry_path
+            registry_path=registry_path,
+            approvals_directory=approvals_directory
         )
+
 
         self.assertEqual(errors, [])
 
