@@ -21,11 +21,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run HPXML parser
-        run: |
-          python hpxml-parser/parser.py test-homes/sample-home.xml
+      - name: Run basic HPXML parser
+        run: python hpxml-parser/parser.py test-homes/sample-home.xml
 
-      - name: Verify extracted values
+      - name: Verify basic HPXML extraction
+        shell: bash
         run: |
           python - <<'PY'
           import importlib.util
@@ -45,22 +45,22 @@ jobs:
           assert result["window_u_factor"] == ["0.30"]
           assert result["window_shgc"] == ["0.25"]
 
-      - name: Test advanced HPXML parser
+          print("All six HPXML extraction checks passed.")
+          PY
+
+      - name: Verify advanced HPXML extraction
+        shell: bash
         run: |
           python - <<'PY'
           import importlib.util
 
           spec = importlib.util.spec_from_file_location(
-              "advanced_parser",
-              "hpxml-parser/advanced_parser.py"
+              "advanced_parser", "hpxml-parser/advanced_parser.py"
           )
-
           module = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(module)
 
-          result = module.parse_hpxml(
-              "test-homes/sample-home.xml"
-          )
+          result = module.parse_hpxml("test-homes/sample-home.xml")
 
           assert result["building"]["conditioned_floor_area"] == ["2200"]
           assert result["building"]["conditioned_volume"] == ["19800"]
@@ -73,7 +73,4 @@ jobs:
           assert result["windows"][0]["shgc"] == "0.25"
 
           print("Advanced HPXML parser tests passed.")
-          PY
-
-          print("All six HPXML extraction checks passed.")
           PY
