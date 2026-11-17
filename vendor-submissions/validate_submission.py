@@ -341,6 +341,32 @@ def validate_reference_approval_metadata(registry_path):
     )
 
 
+def validate_reference_approval_records(registry_path):
+    """
+    Verify approval documents for production
+    reference homes.
+    """
+
+    repository_root = Path(__file__).resolve().parent.parent
+
+    validator_path = (
+        repository_root
+        / "test-homes"
+        / "validate_approval_records.py"
+    )
+
+    spec = importlib.util.spec_from_file_location(
+        "validate_approval_records",
+        validator_path
+    )
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module.validate_approval_records(
+        registry_path=registry_path
+    )
+
 
 
 
@@ -423,7 +449,11 @@ def validate_reference_home(
             validate_reference_approval_metadata(
                 registry_path
             )
-        )
+        
+        errors.extend(
+            validate_reference_approval_records(registry_path)
+            )
+
 
     return errors
 
