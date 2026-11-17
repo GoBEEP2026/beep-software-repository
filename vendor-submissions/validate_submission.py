@@ -341,7 +341,11 @@ def validate_reference_approval_metadata(registry_path):
     )
 
 
-def validate_reference_approval_records(registry_path):
+
+def validate_reference_approval_records(
+    registry_path,
+    approvals_directory=None
+):
     """
     Verify approval documents for production
     reference homes.
@@ -364,7 +368,8 @@ def validate_reference_approval_records(registry_path):
     spec.loader.exec_module(module)
 
     return module.validate_approval_records(
-        registry_path=registry_path
+        registry_path=registry_path,
+        approvals_directory=approvals_directory
     )
 
 
@@ -516,9 +521,14 @@ def validate_production_requirements(documents):
 
 
 
+
 def validate_submission(
-    folder, production=False, registry_path=None
+    folder,
+    production=False,
+    registry_path=None,
+    approvals_directory=None
 ):
+
     folder = Path(folder)
     errors = []
 
@@ -654,9 +664,12 @@ def validate_submission(
         )
 
         errors.extend(
-            validate_reference_approval_records(
-                registry_path
-            )
+            
+validate_reference_approval_records(
+    registry_path,
+    approvals_directory=approvals_directory
+)
+
         )
 
     return errors
