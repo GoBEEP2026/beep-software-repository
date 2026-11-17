@@ -313,9 +313,70 @@ def validate_json_schemas(documents, folder):
 
 
 
+def validate_production_requirements(documents):
+    errors = []
+
+    submission = documents["submission.json"]
+    results = documents["results.json"]
+    manifest = documents["manifest.json"]
+
+    # Production submissions cannot use sample results.
+    if results.get("calculation_status") != "COMPLETED":
+        errors.append(
+            "Production submission requires COMPLETED calculation status"
+        )
+
+    # Software and engine versions must be identified.
+    software = submission.get("software", {})
+
+    if not isinstance(software, dict):
+        errors.append("Invalid software metadata")
+    else:
+        for field in ["product_version", "engine_version"]:
+            value = software.get(field)
+
+            if (
+                not isinstance(value, str)
+                or not value.strip()
+                or value.strip().lower() in [
+                    "not-specified",
+                    "unknown",
+                    "n/a",
+                    "tbd"
+                ]
+            ):
+                errors.append(
+                    f"Production submission requires valid {field}"
+                )
+
+    # Production manifests require generated checksums.
+    if manifest.get("manifest_status") != "CHECKSUMS_GENERATED":
+        errors.append(
+            "Production submission requires generated SHA-256 checksums"
+        )
+
+    entries = manifest.get("files", [])
+
+    if not isinstance(entries, list):
+        errors.append("Invalid production manifest inventory")
+    else:
+        for entry in entries:
+            if not isinstance(entry, dict):
+                errors.append("Invalid production manifest entry")
+                continue
+
+            if not isinstance(entry.get("sha256"), str):
+                errors.append(
+                    f"Missing production checksum: {entry.get('filename')}"
+                )
+
+    return errors
 
 
-def validate_submission(folder):
+
+
+
+def validate_submission(folder, production=False):
     folder = Path(folder)
     errors = []
 
@@ -425,6 +486,13 @@ def validate_submission(folder):
         validate_json_schemas(documents, folder)
     )
 
+    # Apply additional requirements to production submissions.
+    if production:
+        errors.extend(
+            validate_production_requirements(documents)
+        )
+
+
     return errors
 
 
@@ -437,7 +505,14 @@ if __name__ == "__main__":
         else Path(__file__).parent
     )
 
-    errors = validate_submission(folder)
+    
+    production_mode = "--production" in sys.argv[1:]
+
+    errors = validate_submission(
+        folder,
+        production=production_mode
+    )
+
 
     if errors:
         print("B.E.E.P. SUBMISSION VALIDATION FAILED")
