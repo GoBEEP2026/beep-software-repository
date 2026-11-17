@@ -1,4 +1,5 @@
 import json
+import math
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -10,6 +11,90 @@ REQUIRED_FILES = [
     "component-map.json",
     "manifest.json",
 ]
+
+
+def validate_energy_results(document):
+    errors = []
+
+    results = document.get("results")
+    if not isinstance(results, dict):
+        return ["Missing or invalid results object"]
+
+    annual = results.get("annual_energy")
+    if not isinstance(annual, dict):
+        return ["Missing or invalid annual_energy object"]
+
+    end_uses = [
+        "heating_kwh",
+        "cooling_kwh",
+        "water_heating_kwh",
+        "lighting_kwh",
+        "appliances_kwh",
+        "other_kwh",
+    ]
+
+    values = {}
+
+    for field in ["total_site_kwh"] + end_uses:
+        value = annual.get(field)
+
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or value < 0
+        ):
+            errors.append(
+                f"Invalid or missing annual energy value: {field}"
+            )
+        else:
+            values[field] = value
+
+    if len(values) == len(end_uses) + 1:
+        total = values["total_site_kwh"]
+        calculated = sum(values[field] for field in end_uses)
+
+        if not math.isclose(
+            total, calculated, rel_tol=1e-6, abs_tol=0.01
+        ):
+            errors.append(
+                f"Annual energy total mismatch: "
+                f"reported={total}, calculated={calculated}"
+            )
+
+    eri = results.get("eri_score")
+    if (
+        isinstance(eri, bool)
+        or not isinstance(eri, (int, float))
+        or not math.isfinite(eri)
+        or eri < 0
+    ):
+        errors.append("Invalid or missing eri_score")
+
+    loads = results.get("design_loads")
+    if not isinstance(loads, dict):
+        errors.append("Missing or invalid design_loads")
+    else:
+        for field in ["heating_btuh", "cooling_btuh"]:
+            value = loads.get(field)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value < 0
+            ):
+                errors.append(
+                    f"Invalid or missing design load: {field}"
+                )
+
+    # Validate energy modeling results
+    errors.extend(
+        validate_energy_results(documents["results.json"])
+    )
+
+
+    return errors
+
 
 
 def validate_submission(folder):
