@@ -65,6 +65,7 @@ class TestApprovalRecords(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
+    
     def valid_record(self):
         return (
             "# B.E.E.P. Approval Record\n\n"
@@ -72,7 +73,11 @@ class TestApprovalRecords(unittest.TestCase):
             "Reference Home Version: 1.0.0\n"
             "Approval Record ID: TEST-APPROVAL-001\n"
             "Approval Status: APPROVED\n"
+            "Approval Authority: B.E.E.P. Board of Directors\n"
+            "Board Resolution Reference: TEST-BOARD-RES-001\n"
+            "Board Decision Date: 2026-11-17\n"
         )
+
 
     def save_registry(self):
         registry = {
