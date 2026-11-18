@@ -232,6 +232,13 @@ def validate_reference_approval(
                 f"{prefix}: Missing approval record"
             )
 
+        if not is_nonempty_string(
+            approval.get("board_resolution_reference")
+        ):
+            errors.append(
+                f"{prefix}: Missing Board resolution reference"
+            )
+
         reference_files = home.get("reference_files")
 
         if not isinstance(reference_files, list) or not reference_files:
