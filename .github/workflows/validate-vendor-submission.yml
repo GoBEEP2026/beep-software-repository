@@ -1,8 +1,6 @@
 name: Validate Vendor Submission
 
 
-name: Validate Vendor Submission
-
 on:
   push:
     branches:
@@ -13,17 +11,6 @@ on:
       - main
 
   workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  validate-submission:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
 
 permissions:
