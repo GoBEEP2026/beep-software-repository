@@ -80,12 +80,15 @@ class TestReferenceLifecycle(unittest.TestCase):
 
         errors = self.validate(current)
 
+        
         self.assertTrue(
             any(
-                "Approved reference_files cannot be modified" in error
+                "Approved reference home metadata cannot be modified"
+                in error
                 for error in errors
             )
         )
+
 
 
 if __name__ == "__main__":
