@@ -102,7 +102,12 @@ def validate_approval_audit_matches(
     return errors
 
 
-def validate_reference_approval(registry_path=None):
+
+def validate_reference_approval(
+    registry_path=None,
+    audit_path=None,
+):
+
     if registry_path is None:
         registry_path = (
             Path(__file__).resolve().parent
@@ -237,9 +242,14 @@ def validate_reference_approval(registry_path=None):
                 f"{prefix}: Invalid test cycle identifier"
             )
 
+    
     errors.extend(
-        validate_approval_audit_matches(registry)
+        validate_approval_audit_matches(
+            registry,
+            audit_path=audit_path,
+        )
     )
+
 
     return errors
 
