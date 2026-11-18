@@ -531,14 +531,19 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             exist_ok=True
         )
 
+       
         approval_path.write_text(
             "# B.E.E.P. Test Approval Record\n\n"
             "Reference Home ID: BEEP-HOME-001\n"
             "Reference Home Version: 1.0.0\n"
             "Approval Record ID: TEST-APPROVAL-001\n"
-            "Approval Status: APPROVED\n",
+            "Approval Status: APPROVED\n"
+            "Approval Authority: B.E.E.P. Board of Directors\n"
+            "Board Resolution Reference: TEST-BOARD-RES-001\n"
+            "Board Decision Date: 2026-11-17\n",
             encoding="utf-8"
         )
+
 
         self.generate_test_hashes()
 
