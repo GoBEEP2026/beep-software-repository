@@ -198,6 +198,34 @@ def validate_approval_records(
                 f"{prefix}: {board_error}"
             )
 
+        # Verify Board authorization matches the registry.
+        board_fields = {
+            "Approval Authority": approval.get("approved_by"),
+            "Board Decision Date": approval.get("approval_date"),
+            "Board Resolution Reference": approval.get(
+                "board_resolution_reference"
+            ),
+        }
+
+        for field, expected in board_fields.items():
+            if not isinstance(expected, str) or not expected.strip():
+                errors.append(
+                    f"{prefix}: Missing registry value for {field}"
+                )
+                continue
+
+            pattern = re.compile(
+                rf"(?m)^\s*(?:-\s*)?(?:\*\*)?"
+                rf"{re.escape(field)}:(?:\*\*)?\s*"
+                rf"{re.escape(expected)}\s*$"
+            )
+
+            if not pattern.search(content):
+                errors.append(
+                    f"{prefix}: Approval document missing or "
+                    f"mismatched {field}"
+                )
+
     return errors
 
 

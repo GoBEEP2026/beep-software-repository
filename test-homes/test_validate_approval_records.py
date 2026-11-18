@@ -36,11 +36,14 @@ class TestApprovalRecords(unittest.TestCase):
             "test_home_id": "BEEP-HOME-001",
             "test_home_version": "1.0.0",
             "status": "APPROVED",
+            
             "approval": {
-                "approved_by": "Test Approval Authority",
+                "approved_by": "B.E.E.P. Board of Directors",
                 "approval_date": "2026-11-17",
-                "approval_record": "TEST-APPROVAL-001"
+                "approval_record": "TEST-APPROVAL-001",
+                "board_resolution_reference": "TEST-BOARD-RES-001"
             }
+
         }
 
         self.record_path = (
@@ -160,6 +163,24 @@ class TestApprovalRecords(unittest.TestCase):
         self.assertTrue(
             any(
                 "must explicitly state APPROVED" in e
+                for e in errors
+            )
+        )
+
+    def test_mismatched_board_resolution_rejected(self):
+        self.record_path.write_text(
+            self.valid_record().replace(
+                "Board Resolution Reference: TEST-BOARD-RES-001",
+                "Board Resolution Reference: TEST-BOARD-RES-999"
+            ),
+            encoding="utf-8"
+        )
+
+        errors = self.validate()
+
+        self.assertTrue(
+            any(
+                "mismatched Board Resolution Reference" in e
                 for e in errors
             )
         )

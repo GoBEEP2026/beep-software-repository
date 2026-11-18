@@ -98,14 +98,17 @@ class TestReferenceApproval(unittest.TestCase):
         )
 
 
+    
     def approve_home(self):
         self.home["status"] = "APPROVED"
         self.home["approval"] = {
-            "approved_by": "BEEP Technical Committee",
+            "approved_by": "B.E.E.P. Board of Directors",
             "approval_date": "2026-11-17",
-            "approval_record": "BEEP-APPROVAL-001"
+            "approval_record": "BEEP-APPROVAL-001",
+            "board_resolution_reference": "TEST-BOARD-RES-001"
         }
         self.home["test_cycles"] = ["2027-Q1"]
+
 
     def test_development_home_passes(self):
         self.assertEqual(self.validate(), [])
@@ -220,6 +223,7 @@ class TestReferenceApproval(unittest.TestCase):
             )
         )
 
+   
     def test_approved_home_accepts_matching_audit(self):
         registry = {
             "reference_homes": [
@@ -228,9 +232,10 @@ class TestReferenceApproval(unittest.TestCase):
                     "test_home_version": "1.0.0",
                     "status": "APPROVED",
                     "approval": {
-                        "approved_by": "Test Approval Authority",
+                        "approved_by": "B.E.E.P. Board of Directors",
                         "approval_date": "2026-11-18",
                         "approval_record": "TEST-001",
+                        "board_resolution_reference": "TEST-BOARD-RES-001",
                     },
                 }
             ]
@@ -246,10 +251,11 @@ class TestReferenceApproval(unittest.TestCase):
                     "reference_home_version": "1.0.0",
                     "decision": "APPROVED",
                     "reviewer": "Test Technical Reviewer",
-                    "approval_authority": "Test Approval Authority",
+                    "approval_authority": "B.E.E.P. Board of Directors",
                     "evidence": "TEST-EVIDENCE-001",
                     "pull_request": "TEST-PR-001",
                     "decision_date": "2026-11-18",
+                    "board_resolution_reference": "TEST-BOARD-RES-001",
                 }
             ],
         }
@@ -269,6 +275,7 @@ class TestReferenceApproval(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+    
     def test_mismatched_approval_record_id_rejected(self):
         self.approve_home()
 
@@ -279,10 +286,11 @@ class TestReferenceApproval(unittest.TestCase):
                 "reference_home_version": "1.0.0",
                 "decision": "APPROVED",
                 "reviewer": "Test Technical Reviewer",
-                "approval_authority": "BEEP Technical Committee",
+                "approval_authority": "B.E.E.P. Board of Directors",
                 "evidence": "TEST-EVIDENCE-001",
                 "pull_request": "TEST-PR-001",
                 "decision_date": "2026-11-17",
+                "board_resolution_reference": "TEST-BOARD-RES-001"
             }
         ]
 
@@ -295,6 +303,9 @@ class TestReferenceApproval(unittest.TestCase):
             )
         )
 
+
+       
+   
     def test_full_validator_accepts_matching_approval(self):
         self.approve_home()
 
@@ -305,10 +316,11 @@ class TestReferenceApproval(unittest.TestCase):
                 "reference_home_version": "1.0.0",
                 "decision": "APPROVED",
                 "reviewer": "Test Technical Reviewer",
-                "approval_authority": "BEEP Technical Committee",
+                "approval_authority": "B.E.E.P. Board of Directors",
                 "evidence": "TEST-EVIDENCE-001",
                 "pull_request": "TEST-PR-001",
                 "decision_date": "2026-11-17",
+                "board_resolution_reference": "TEST-BOARD-RES-001"
             }
         ]
 
@@ -316,6 +328,8 @@ class TestReferenceApproval(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+
+           
     def test_matching_audit_with_missing_reviewer_rejected(self):
         self.approve_home()
 
@@ -325,10 +339,11 @@ class TestReferenceApproval(unittest.TestCase):
                 "reference_home_id": "BEEP-HOME-001",
                 "reference_home_version": "1.0.0",
                 "decision": "APPROVED",
-                "approval_authority": "BEEP Technical Committee",
+                "approval_authority": "B.E.E.P. Board of Directors",
                 "evidence": "TEST-EVIDENCE-001",
                 "pull_request": "TEST-PR-001",
                 "decision_date": "2026-11-17",
+                "board_resolution_reference": "TEST-BOARD-RES-001"
             }
         ]
 
@@ -337,6 +352,34 @@ class TestReferenceApproval(unittest.TestCase):
         self.assertTrue(
             any(
                 "Missing reviewer" in error
+                for error in errors
+            )
+        )
+
+        
+    def test_mismatched_board_resolution_rejected(self):
+        self.approve_home()
+
+        self.audit["records"] = [
+            {
+                "record_id": "BEEP-APPROVAL-001",
+                "reference_home_id": "BEEP-HOME-001",
+                "reference_home_version": "1.0.0",
+                "decision": "APPROVED",
+                "reviewer": "Test Technical Reviewer",
+                "approval_authority": "B.E.E.P. Board of Directors",
+                "evidence": "TEST-EVIDENCE-001",
+                "pull_request": "TEST-PR-001",
+                "decision_date": "2026-11-17",
+                "board_resolution_reference": "TEST-BOARD-RES-999"
+            }
+        ]
+
+        errors = self.validate()
+
+        self.assertTrue(
+            any(
+                "No matching APPROVED audit decision" in error
                 for error in errors
             )
         )

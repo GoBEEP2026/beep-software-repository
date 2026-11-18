@@ -115,8 +115,12 @@ def validate_approval_audit_matches(
             and record.get("approval_authority")
                 == approval.get("approved_by")
 
+           
             and record.get("decision_date")
                 == approval.get("approval_date")
+            and record.get("board_resolution_reference")
+                == approval.get("board_resolution_reference")
+
         ]
 
         if not matching_records:
@@ -226,6 +230,13 @@ def validate_reference_approval(
         ):
             errors.append(
                 f"{prefix}: Missing approval record"
+            )
+
+        if not is_nonempty_string(
+            approval.get("board_resolution_reference")
+        ):
+            errors.append(
+                f"{prefix}: Missing Board resolution reference"
             )
 
         reference_files = home.get("reference_files")

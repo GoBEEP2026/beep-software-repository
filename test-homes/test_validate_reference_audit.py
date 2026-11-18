@@ -29,6 +29,7 @@ class TestReferenceApprovalAudit(unittest.TestCase):
             encoding="utf-8"
         )
 
+    
     def valid_record(self):
         return {
             "record_id": "TEST-AUDIT-001",
@@ -39,8 +40,10 @@ class TestReferenceApprovalAudit(unittest.TestCase):
             "approval_authority": "Test Approval Authority",
             "evidence": "TEST-EVIDENCE-001",
             "pull_request": "TEST-PR-001",
-            "decision_date": "2026-11-18"
+            "decision_date": "2026-11-18",
+            "board_resolution_reference": "TEST-BOARD-RES-001"
         }
+
 
     def test_empty_development_audit_passes(self):
         self.save_audit()
@@ -115,6 +118,38 @@ class TestReferenceApprovalAudit(unittest.TestCase):
 
         self.assertTrue(
             any("Invalid decision date" in e for e in errors)
+        )
+
+    def test_missing_board_resolution_rejected(self):
+        record = self.valid_record()
+        del record["board_resolution_reference"]
+
+        self.audit["records"].append(record)
+        self.save_audit()
+
+        errors = validate_audit(self.audit_path)
+
+        self.assertTrue(
+            any(
+                "Missing board_resolution_reference" in e
+                for e in errors
+            )
+        )
+
+    def test_empty_board_resolution_rejected(self):
+        record = self.valid_record()
+        record["board_resolution_reference"] = ""
+
+        self.audit["records"].append(record)
+        self.save_audit()
+
+        errors = validate_audit(self.audit_path)
+
+        self.assertTrue(
+            any(
+                "Missing board_resolution_reference" in e
+                for e in errors
+            )
         )
 
 

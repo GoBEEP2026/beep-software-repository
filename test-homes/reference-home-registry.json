@@ -25,11 +25,14 @@
         "R405"
       ],
       "test_cycles": [],
-      "approval": {
-        "approved_by": null,
-        "approval_date": null,
-        "approval_record": null
-      },
+      
+"approval": {
+  "approved_by": null,
+  "approval_date": null,
+  "approval_record": null,
+  "board_resolution_reference": null
+},
+
       "version_history": [
         {
           "version": "1.0.0",
