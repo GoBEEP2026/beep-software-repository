@@ -288,6 +288,27 @@ class TestReferenceApproval(unittest.TestCase):
             )
         )
 
+    def test_full_validator_accepts_matching_approval(self):
+        self.approve_home()
+
+        self.audit["records"] = [
+            {
+                "record_id": "BEEP-APPROVAL-001",
+                "reference_home_id": "BEEP-HOME-001",
+                "reference_home_version": "1.0.0",
+                "decision": "APPROVED",
+                "reviewer": "Test Technical Reviewer",
+                "approval_authority": "BEEP Technical Committee",
+                "evidence": "TEST-EVIDENCE-001",
+                "pull_request": "TEST-PR-001",
+                "decision_date": "2026-11-17",
+            }
+        ]
+
+        errors = self.validate()
+
+        self.assertEqual(errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()
