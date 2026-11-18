@@ -40,6 +40,13 @@ jobs:
             -p "test_validate_reference_integrity.py" \
             -v
 
+      - name: Run reference lifecycle unit tests
+        run: |
+          python -m unittest discover \
+            -s test-homes \
+            -p "test_validate_reference_lifecycle.py" \
+            -v
+
       - name: Validate reference home approvals
         run: |
           python test-homes/validate_reference_approval.py
