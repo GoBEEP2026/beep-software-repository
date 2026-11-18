@@ -167,6 +167,24 @@ class TestApprovalRecords(unittest.TestCase):
             )
         )
 
+    def test_mismatched_board_resolution_rejected(self):
+        self.record_path.write_text(
+            self.valid_record().replace(
+                "Board Resolution Reference: TEST-BOARD-RES-001",
+                "Board Resolution Reference: TEST-BOARD-RES-999"
+            ),
+            encoding="utf-8"
+        )
+
+        errors = self.validate()
+
+        self.assertTrue(
+            any(
+                "mismatched Board Resolution Reference" in e
+                for e in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
