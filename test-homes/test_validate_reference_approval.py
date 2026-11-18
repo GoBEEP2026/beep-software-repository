@@ -272,6 +272,7 @@ class TestReferenceApproval(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+    
     def test_mismatched_approval_record_id_rejected(self):
         self.approve_home()
 
@@ -282,12 +283,23 @@ class TestReferenceApproval(unittest.TestCase):
                 "reference_home_version": "1.0.0",
                 "decision": "APPROVED",
                 "reviewer": "Test Technical Reviewer",
-                "approval_authority": "BEEP Technical Committee",
+                "approval_authority": "B.E.E.P. Board of Directors",
                 "evidence": "TEST-EVIDENCE-001",
                 "pull_request": "TEST-PR-001",
                 "decision_date": "2026-11-17",
+                "board_resolution_reference": "TEST-BOARD-RES-001"
             }
         ]
+
+        errors = self.validate()
+
+        self.assertTrue(
+            any(
+                "No matching APPROVED audit decision" in error
+                for error in errors
+            )
+        )
+
 
         errors = self.validate()
 
