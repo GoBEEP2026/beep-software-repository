@@ -127,10 +127,11 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
             if field != "status"
         }
 
+       
         if current_metadata != previous_metadata:
             errors.append(
-                f"{home_id}/{version}: Approved reference home "
-                "metadata cannot be modified"
+                f"{home_id}/{version}: Approved or retired "
+                "reference home metadata cannot be modified"
             )
 
 
