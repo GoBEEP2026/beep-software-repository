@@ -309,6 +309,31 @@ class TestReferenceApproval(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+    def test_matching_audit_with_missing_reviewer_rejected(self):
+        self.approve_home()
+
+        self.audit["records"] = [
+            {
+                "record_id": "BEEP-APPROVAL-001",
+                "reference_home_id": "BEEP-HOME-001",
+                "reference_home_version": "1.0.0",
+                "decision": "APPROVED",
+                "approval_authority": "BEEP Technical Committee",
+                "evidence": "TEST-EVIDENCE-001",
+                "pull_request": "TEST-PR-001",
+                "decision_date": "2026-11-17",
+            }
+        ]
+
+        errors = self.validate()
+
+        self.assertTrue(
+            any(
+                "Missing reviewer" in error
+                for error in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
