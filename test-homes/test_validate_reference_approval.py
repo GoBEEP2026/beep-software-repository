@@ -3,6 +3,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+import sys
+
+TEST_HOME_DIRECTORY = Path(__file__).resolve().parent
+sys.path.insert(0, str(TEST_HOME_DIRECTORY))
 
 
 MODULE_PATH = (
