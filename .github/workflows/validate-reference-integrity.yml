@@ -61,3 +61,13 @@ jobs:
             -s test-homes \
             -p "test_validate_approval_records.py" \
             -v
+
+      - name: Validate reference approval audit log
+        run: python test-homes/validate_reference_audit.py
+
+      - name: Test reference approval audit validation
+        run: |
+          python -m unittest discover \
+            -s test-homes \
+            -p "test_validate_reference_audit.py" \
+            -v
