@@ -115,8 +115,12 @@ def validate_approval_audit_matches(
             and record.get("approval_authority")
                 == approval.get("approved_by")
 
+           
             and record.get("decision_date")
                 == approval.get("approval_date")
+            and record.get("board_resolution_reference")
+                == approval.get("board_resolution_reference")
+
         ]
 
         if not matching_records:
