@@ -94,6 +94,11 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
                 f"from {previous_status} to {current_status}"
             )
 
+        # Apply immutability protections only to versions
+        # that were already approved or retired.
+        if previous_status not in ("APPROVED", "RETIRED"):
+            continue
+
         # Retirement is permitted, but approved metadata is preserved.
         permitted_statuses = {"APPROVED", "RETIRED"}
 
