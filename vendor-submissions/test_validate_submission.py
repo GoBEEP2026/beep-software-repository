@@ -609,10 +609,12 @@ class TestVendorSubmissionValidator(unittest.TestCase):
         home = registry["reference_homes"][0]
         home["status"] = "APPROVED"
 
+        
         home["approval"] = {
-            "approved_by": "BEEP Test Approval Authority",
+            "approved_by": "B.E.E.P. Board of Directors",
             "approval_date": "2026-11-17",
-            "approval_record": "TEST-APPROVAL-001"
+            "approval_record": "TEST-APPROVAL-001",
+            "board_resolution_reference": "TEST-BOARD-RES-001"
         }
 
         home["test_cycles"] = ["TEST-CYCLE-001"]
