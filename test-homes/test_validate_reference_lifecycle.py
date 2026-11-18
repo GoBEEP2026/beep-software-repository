@@ -83,7 +83,7 @@ class TestReferenceLifecycle(unittest.TestCase):
         
         self.assertTrue(
             any(
-                "Approved reference home metadata cannot be modified"
+                "Approved or retired reference home metadata cannot be modified"
                 in error
                 for error in errors
             )
