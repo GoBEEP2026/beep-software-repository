@@ -134,6 +134,52 @@ class TestReferenceApproval(unittest.TestCase):
             any("No assigned test cycles" in e for e in errors)
         )
 
+    def test_approved_home_requires_matching_audit(self):
+        from validate_reference_approval import (
+            validate_approval_audit_matches,
+        )
+
+        registry = {
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-TEST-001",
+                    "test_home_version": "1.0.0",
+                    "status": "APPROVED",
+                    "approval": {
+                        "approved_by": "Test Approval Authority",
+                        "approval_date": "2026-11-18",
+                        "approval_record": "TEST-001",
+                    },
+                }
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "audit.json"
+
+            audit_path.write_text(
+                json.dumps(
+                    {
+                        "audit_schema_version": "1.0.0",
+                        "audit_status": "DEVELOPMENT",
+                        "records": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            errors = validate_approval_audit_matches(
+                registry,
+                audit_path=audit_path,
+            )
+
+        self.assertTrue(
+            any(
+                "No matching APPROVED audit decision" in error
+                for error in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
