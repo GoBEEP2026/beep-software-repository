@@ -3,6 +3,7 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
+from validate_reference_audit import validate_audit
 
 
 VALID_STATUSES = {
@@ -50,6 +51,14 @@ def validate_approval_audit_matches(
 
     if not approved_homes:
         return []
+
+    audit_errors = validate_audit(audit_path)
+
+    if audit_errors:
+        return [
+            f"Invalid reference approval audit: {error}"
+            for error in audit_errors
+        ]
 
     try:
         audit = json.loads(
