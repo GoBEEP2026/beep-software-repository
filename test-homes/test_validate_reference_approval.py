@@ -223,6 +223,7 @@ class TestReferenceApproval(unittest.TestCase):
             )
         )
 
+   
     def test_approved_home_accepts_matching_audit(self):
         registry = {
             "reference_homes": [
@@ -231,9 +232,10 @@ class TestReferenceApproval(unittest.TestCase):
                     "test_home_version": "1.0.0",
                     "status": "APPROVED",
                     "approval": {
-                        "approved_by": "Test Approval Authority",
+                        "approved_by": "B.E.E.P. Board of Directors",
                         "approval_date": "2026-11-18",
                         "approval_record": "TEST-001",
+                        "board_resolution_reference": "TEST-BOARD-RES-001",
                     },
                 }
             ]
@@ -249,10 +251,11 @@ class TestReferenceApproval(unittest.TestCase):
                     "reference_home_version": "1.0.0",
                     "decision": "APPROVED",
                     "reviewer": "Test Technical Reviewer",
-                    "approval_authority": "Test Approval Authority",
+                    "approval_authority": "B.E.E.P. Board of Directors",
                     "evidence": "TEST-EVIDENCE-001",
                     "pull_request": "TEST-PR-001",
                     "decision_date": "2026-11-18",
+                    "board_resolution_reference": "TEST-BOARD-RES-001",
                 }
             ],
         }
