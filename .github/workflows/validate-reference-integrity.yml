@@ -71,3 +71,19 @@ jobs:
             -s test-homes \
             -p "test_validate_reference_audit.py" \
             -v
+
+      - name: Test append-only audit validation
+        run: |
+          python -m unittest discover \
+            -s test-homes \
+            -p "test_validate_audit_append_only.py" \
+            -v
+
+      - name: Verify approval audit history is append-only
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git show "${BASE_SHA}:test-homes/reference-approval-audit.json" > /tmp/beep-previous-approval-audit.json
+          python test-homes/validate_audit_append_only.py /tmp/beep-previous-approval-audit.json
