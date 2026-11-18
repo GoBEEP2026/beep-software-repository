@@ -41,5 +41,5 @@ jobs:
         run: |
           python -m unittest discover \
             -s vendor-submissions \
-            -p "test_validate_submission.py" \
+            -p "test_*.py" \
             -v
