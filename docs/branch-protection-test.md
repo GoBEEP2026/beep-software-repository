@@ -13,3 +13,8 @@ pull request validation process.
 ## Status
 
 TEST ONLY - Not part of production documentation.
+
+## Verification Update
+
+Both required validation workflows will be checked
+on this pull request.
