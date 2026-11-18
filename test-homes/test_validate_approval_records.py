@@ -36,11 +36,14 @@ class TestApprovalRecords(unittest.TestCase):
             "test_home_id": "BEEP-HOME-001",
             "test_home_version": "1.0.0",
             "status": "APPROVED",
+            
             "approval": {
-                "approved_by": "Test Approval Authority",
+                "approved_by": "B.E.E.P. Board of Directors",
                 "approval_date": "2026-11-17",
-                "approval_record": "TEST-APPROVAL-001"
+                "approval_record": "TEST-APPROVAL-001",
+                "board_resolution_reference": "TEST-BOARD-RES-001"
             }
+
         }
 
         self.record_path = (
