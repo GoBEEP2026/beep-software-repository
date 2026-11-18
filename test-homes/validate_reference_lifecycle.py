@@ -39,6 +39,62 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
                 "a reference_homes array"
             )
 
+    if errors:
+        return errors
+
+    previous = json.loads(
+        Path(previous_registry_path).read_text(encoding="utf-8")
+    )
+    current = json.loads(
+        Path(current_registry_path).read_text(encoding="utf-8")
+    )
+
+    current_homes = {
+        (home.get("test_home_id"), home.get("test_home_version")): home
+        for home in current["reference_homes"]
+        if isinstance(home, dict)
+    }
+
+    for previous_home in previous["reference_homes"]:
+        if not isinstance(previous_home, dict):
+            continue
+
+        if previous_home.get("status") != "APPROVED":
+            continue
+
+        home_id = previous_home.get("test_home_id")
+        version = previous_home.get("test_home_version")
+        key = (home_id, version)
+
+        current_home = current_homes.get(key)
+
+        if current_home is None:
+            errors.append(
+                f"{home_id}/{version}: Approved version cannot be removed"
+            )
+            continue
+
+        # Retirement is permitted, but approved metadata is preserved.
+        permitted_statuses = {"APPROVED", "RETIRED"}
+
+        if current_home.get("status") not in permitted_statuses:
+            errors.append(
+                f"{home_id}/{version}: Approved version cannot "
+                "return to development or review"
+            )
+
+        for field in (
+            "reference_files",
+            "approval",
+            "test_home_version",
+            "test_home_id",
+        ):
+            if current_home.get(field) != previous_home.get(field):
+                errors.append(
+                    f"{home_id}/{version}: Approved {field} "
+                    "cannot be modified"
+                )
+
     return errors
 
 
