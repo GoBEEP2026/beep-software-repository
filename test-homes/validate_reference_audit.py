@@ -73,12 +73,15 @@ def validate_audit(path=AUDIT_FILE):
         if record.get("decision") not in VALID_DECISIONS:
             errors.append(f"{prefix}: Invalid decision")
 
+       
         for field in (
             "reviewer",
             "approval_authority",
             "evidence",
             "pull_request",
+            "board_resolution_reference",
         ):
+
             value = record.get(field)
 
             if not isinstance(value, str) or not value.strip():
