@@ -100,9 +100,19 @@ class TestReferenceApproval(unittest.TestCase):
 
         self.assertEqual(self.validate(), [])
 
-    def test_approved_home_valid_metadata(self):
+   
+    def test_approved_home_without_audit_is_rejected(self):
         self.approve_home()
-        self.assertEqual(self.validate(), [])
+
+        errors = self.validate()
+
+        self.assertTrue(
+            any(
+                "No matching APPROVED audit decision" in error
+                for error in errors
+            )
+        )
+
 
     def test_missing_approval_authority_rejected(self):
         self.approve_home()
@@ -135,10 +145,9 @@ class TestReferenceApproval(unittest.TestCase):
         )
 
     def test_approved_home_requires_matching_audit(self):
-        from validate_reference_approval import (
-            validate_approval_audit_matches,
+               validate_approval_audit_matches = (
+            module.validate_approval_audit_matches
         )
-
         registry = {
             "reference_homes": [
                 {
