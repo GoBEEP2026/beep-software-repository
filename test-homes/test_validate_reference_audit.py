@@ -120,6 +120,38 @@ class TestReferenceApprovalAudit(unittest.TestCase):
             any("Invalid decision date" in e for e in errors)
         )
 
+    def test_missing_board_resolution_rejected(self):
+        record = self.valid_record()
+        del record["board_resolution_reference"]
+
+        self.audit["records"].append(record)
+        self.save_audit()
+
+        errors = validate_audit(self.audit_path)
+
+        self.assertTrue(
+            any(
+                "Missing board_resolution_reference" in e
+                for e in errors
+            )
+        )
+
+    def test_empty_board_resolution_rejected(self):
+        record = self.valid_record()
+        record["board_resolution_reference"] = ""
+
+        self.audit["records"].append(record)
+        self.save_audit()
+
+        errors = validate_audit(self.audit_path)
+
+        self.assertTrue(
+            any(
+                "Missing board_resolution_reference" in e
+                for e in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
