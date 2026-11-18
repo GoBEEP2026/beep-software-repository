@@ -29,6 +29,7 @@ class TestReferenceApprovalAudit(unittest.TestCase):
             encoding="utf-8"
         )
 
+    
     def valid_record(self):
         return {
             "record_id": "TEST-AUDIT-001",
@@ -39,8 +40,10 @@ class TestReferenceApprovalAudit(unittest.TestCase):
             "approval_authority": "Test Approval Authority",
             "evidence": "TEST-EVIDENCE-001",
             "pull_request": "TEST-PR-001",
-            "decision_date": "2026-11-18"
+            "decision_date": "2026-11-18",
+            "board_resolution_reference": "TEST-BOARD-RES-001"
         }
+
 
     def test_empty_development_audit_passes(self):
         self.save_audit()
