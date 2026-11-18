@@ -3,7 +3,23 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
-from validate_reference_audit import validate_audit
+import importlib.util
+
+AUDIT_VALIDATOR_PATH = (
+    Path(__file__).resolve().parent
+    / "validate_reference_audit.py"
+)
+
+audit_spec = importlib.util.spec_from_file_location(
+    "validate_reference_audit",
+    AUDIT_VALIDATOR_PATH,
+)
+
+audit_module = importlib.util.module_from_spec(audit_spec)
+audit_spec.loader.exec_module(audit_module)
+
+validate_audit = audit_module.validate_audit
+
 
 
 VALID_STATUSES = {
