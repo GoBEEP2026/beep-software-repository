@@ -107,3 +107,34 @@ not yet fully implemented.
 No development reference home should be represented
 as formally approved solely because this policy
 document exists.
+
+## 9. Interim Governance and Board Appointments
+
+**Status:** Pending B.E.E.P. Board action
+
+The B.E.E.P. Board of Directors has not yet appointed
+independent technical reviewers or a formal reference-home
+approval authority.
+
+During this interim period:
+
+- The repository administrator may maintain development
+  files, documentation, and validation infrastructure.
+- Automated integrity and validation checks remain required.
+- Independent technical review appointments remain open.
+- No individual is authorized to grant formal reference-home
+  approval solely through repository administrator access.
+- Reference homes remain in DEVELOPMENT status until the
+  required technical review and approval process is established.
+- Production comparison releases requiring approved reference
+  homes must not be authorized during this interim period.
+
+Before activating mandatory independent GitHub reviews,
+the Board should identify qualified reviewers, document
+their responsibilities, and approve their appointments.
+
+Once appointed, B.E.E.P. will configure appropriate
+repository access and independent approval requirements.
+
+This interim arrangement does not constitute technical
+approval of any reference home.
