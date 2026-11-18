@@ -500,11 +500,14 @@ class TestVendorSubmissionValidator(unittest.TestCase):
         registry["registry_status"] = "APPROVED"
         registry["reference_homes"][0]["status"] = "APPROVED"
 
+       
         registry["reference_homes"][0]["approval"] = {
-            "approved_by": "BEEP Test Approval Authority",
+            "approved_by": "B.E.E.P. Board of Directors",
             "approval_date": "2026-11-17",
-            "approval_record": "TEST-APPROVAL-001"
+            "approval_record": "TEST-APPROVAL-001",
+            "board_resolution_reference": "TEST-BOARD-RES-001"
         }
+
 
         registry["reference_homes"][0]["test_cycles"] = [
             "TEST-CYCLE-001"
@@ -561,10 +564,12 @@ class TestVendorSubmissionValidator(unittest.TestCase):
                     "reference_home_version": "1.0.0",
                     "decision": "APPROVED",
                     "reviewer": "Test Technical Reviewer",
-                    "approval_authority": "BEEP Test Approval Authority",
+                    "approval_authority": "B.E.E.P. Board of Directors",
                     "evidence": "TEST-EVIDENCE-001",
                     "pull_request": "TEST-PR-001",
                     "decision_date": "2026-11-17",
+                    "board_resolution_reference": "TEST-BOARD-RES-001",
+
                 }
             ],
         }
