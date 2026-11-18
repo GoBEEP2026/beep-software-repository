@@ -112,17 +112,27 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
                 "return to development or review"
             )
 
-        for field in (
-            "reference_files",
-            "approval",
-            "test_home_version",
-            "test_home_id",
-        ):
-            if current_home.get(field) != previous_home.get(field):
-                errors.append(
-                    f"{home_id}/{version}: Approved {field} "
-                    "cannot be modified"
-                )
+        
+        # Preserve all approved reference-home metadata.
+        # The lifecycle status may change only for retirement.
+        previous_metadata = {
+            field: value
+            for field, value in previous_home.items()
+            if field != "status"
+        }
+
+        current_metadata = {
+            field: value
+            for field, value in current_home.items()
+            if field != "status"
+        }
+
+        if current_metadata != previous_metadata:
+            errors.append(
+                f"{home_id}/{version}: Approved reference home "
+                "metadata cannot be modified"
+            )
+
 
     return errors
 
