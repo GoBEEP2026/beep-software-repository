@@ -126,6 +126,42 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
 
     return errors
 
+    def test_removing_retired_home_rejected(self):
+        self.home["status"] = "RETIRED"
+
+        self.previous_path.write_text(
+            json.dumps({"reference_homes": [self.home]}),
+            encoding="utf-8"
+        )
+        self.current_path.write_text(
+            json.dumps({"reference_homes": []}),
+            encoding="utf-8"
+        )
+
+        errors = validate_reference_lifecycle(
+            self.previous_path,
+            self.current_path
+        )
+
+        self.assertTrue(
+            any("cannot be removed" in error for error in errors)
+        )
+
+    def test_retired_home_cannot_return_to_approved(self):
+        self.home["status"] = "RETIRED"
+
+        current = copy.deepcopy(self.home)
+        current["status"] = "APPROVED"
+
+        errors = self.validate(current)
+
+        self.assertTrue(
+            any(
+                "Invalid lifecycle transition" in error
+                for error in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
