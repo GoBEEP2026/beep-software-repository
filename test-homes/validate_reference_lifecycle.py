@@ -75,13 +75,17 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
         version = previous_home.get("test_home_version")
         key = (home_id, version)
 
+        
         current_home = current_homes.get(key)
 
         if current_home is None:
-            errors.append(
-                f"{home_id}/{version}: Approved version cannot be removed"
-            )
+            if previous_home.get("status") in ("APPROVED", "RETIRED"):
+                errors.append(
+                    f"{home_id}/{version}: Approved or retired "
+                    "reference home cannot be removed"
+                )
             continue
+
 
         previous_status = previous_home.get("status")
         current_status = current_home.get("status")
