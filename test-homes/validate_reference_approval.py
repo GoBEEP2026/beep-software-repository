@@ -85,8 +85,11 @@ def validate_approval_audit_matches(
             and record.get("reference_home_id") == home_id
             and record.get("reference_home_version") == version
             and record.get("decision") == "APPROVED"
+            and record.get("record_id")
+                == approval.get("approval_record")
             and record.get("approval_authority")
                 == approval.get("approved_by")
+
             and record.get("decision_date")
                 == approval.get("approval_date")
         ]
