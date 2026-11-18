@@ -2,6 +2,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from validate_board_authorization import validate_board_authorization
 
 
 APPROVAL_ID_PATTERN = re.compile(
@@ -167,6 +168,14 @@ def validate_approval_records(
             errors.append(
                 f"{prefix}: Approval document must explicitly "
                 f"state APPROVED"
+            )
+
+        # Require documented B.E.E.P. Board authorization.
+        board_errors = validate_board_authorization(record_path)
+
+        for board_error in board_errors:
+            errors.append(
+                f"{prefix}: {board_error}"
             )
 
     return errors
