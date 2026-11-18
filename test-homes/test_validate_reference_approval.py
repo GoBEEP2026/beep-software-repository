@@ -301,15 +301,7 @@ class TestReferenceApproval(unittest.TestCase):
         )
 
 
-        errors = self.validate()
-
-        self.assertTrue(
-            any(
-                "No matching APPROVED audit decision" in error
-                for error in errors
-            )
-        )
-
+       
    
     def test_full_validator_accepts_matching_approval(self):
         self.approve_home()
@@ -334,10 +326,7 @@ class TestReferenceApproval(unittest.TestCase):
         self.assertEqual(errors, [])
 
 
-        errors = self.validate()
-
-        self.assertEqual(errors, [])
-
+           
     def test_matching_audit_with_missing_reviewer_rejected(self):
         self.approve_home()
 
@@ -347,10 +336,11 @@ class TestReferenceApproval(unittest.TestCase):
                 "reference_home_id": "BEEP-HOME-001",
                 "reference_home_version": "1.0.0",
                 "decision": "APPROVED",
-                "approval_authority": "BEEP Technical Committee",
+                "approval_authority": "B.E.E.P. Board of Directors",
                 "evidence": "TEST-EVIDENCE-001",
                 "pull_request": "TEST-PR-001",
                 "decision_date": "2026-11-17",
+                "board_resolution_reference": "TEST-BOARD-RES-001"
             }
         ]
 
@@ -363,6 +353,7 @@ class TestReferenceApproval(unittest.TestCase):
             )
         )
 
+        
 
 if __name__ == "__main__":
     unittest.main()
