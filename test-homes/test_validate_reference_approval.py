@@ -189,6 +189,55 @@ class TestReferenceApproval(unittest.TestCase):
             )
         )
 
+    def test_approved_home_accepts_matching_audit(self):
+        registry = {
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-TEST-001",
+                    "test_home_version": "1.0.0",
+                    "status": "APPROVED",
+                    "approval": {
+                        "approved_by": "Test Approval Authority",
+                        "approval_date": "2026-11-18",
+                        "approval_record": "TEST-001",
+                    },
+                }
+            ]
+        }
+
+        audit = {
+            "audit_schema_version": "1.0.0",
+            "audit_status": "DEVELOPMENT",
+            "records": [
+                {
+                    "record_id": "TEST-001",
+                    "reference_home_id": "BEEP-TEST-001",
+                    "reference_home_version": "1.0.0",
+                    "decision": "APPROVED",
+                    "reviewer": "Test Technical Reviewer",
+                    "approval_authority": "Test Approval Authority",
+                    "evidence": "TEST-EVIDENCE-001",
+                    "pull_request": "TEST-PR-001",
+                    "decision_date": "2026-11-18",
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "audit.json"
+
+            audit_path.write_text(
+                json.dumps(audit, indent=2),
+                encoding="utf-8",
+            )
+
+            errors = module.validate_approval_audit_matches(
+                registry,
+                audit_path=audit_path,
+            )
+
+        self.assertEqual(errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()
