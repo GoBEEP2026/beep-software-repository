@@ -172,11 +172,14 @@ class TestReferenceApproval(unittest.TestCase):
             any("No assigned test cycles" in e for e in errors)
         )
 
+   
     def test_approved_home_requires_matching_audit(self):
-               validate_approval_audit_matches = (
+        validate_approval_audit_matches = (
             module.validate_approval_audit_matches
         )
+
         registry = {
+
             "reference_homes": [
                 {
                     "test_home_id": "BEEP-TEST-001",
