@@ -313,7 +313,12 @@ def validate_json_schemas(documents, folder):
     return errors
 
 
-def validate_reference_approval_metadata(registry_path):
+
+def validate_reference_approval_metadata(
+    registry_path,
+    audit_path=None,
+):
+
     """
     Run the B.E.E.P. reference-home approval validator
     against the selected registry.
@@ -336,9 +341,12 @@ def validate_reference_approval_metadata(registry_path):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
+   
     return module.validate_reference_approval(
-        registry_path=registry_path
+        registry_path=registry_path,
+        audit_path=audit_path,
     )
+
 
 
 
@@ -522,12 +530,15 @@ def validate_production_requirements(documents):
 
 
 
+
 def validate_submission(
     folder,
     production=False,
     registry_path=None,
-    approvals_directory=None
+    approvals_directory=None,
+    audit_path=None,
 ):
+
 
     folder = Path(folder)
     errors = []
@@ -657,11 +668,14 @@ def validate_submission(
 
     # Verify approval documentation for production submissions.
     if production:
+        
         errors.extend(
             validate_reference_approval_metadata(
-                registry_path
+                registry_path,
+                audit_path=audit_path,
             )
         )
+
 
         errors.extend(
             

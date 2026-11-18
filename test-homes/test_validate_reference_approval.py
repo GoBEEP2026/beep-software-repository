@@ -3,6 +3,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+import sys
+
+TEST_HOME_DIRECTORY = Path(__file__).resolve().parent
+sys.path.insert(0, str(TEST_HOME_DIRECTORY))
 
 
 MODULE_PATH = (
@@ -29,6 +33,19 @@ class TestReferenceApproval(unittest.TestCase):
             self.folder / "reference-home-registry.json"
         )
 
+        self.audit_path = (
+            self.folder / "reference-approval-audit.json"
+        )
+
+        self.audit = {
+            "audit_schema_version": "1.0.0",
+            "repository": "BEEP Software Consistency Repository",
+            "audit_status": "DEVELOPMENT",
+            "records": [],
+        }
+
+        self.save_audit()
+
         self.home = {
             "test_home_id": "BEEP-HOME-001",
             "test_home_version": "1.0.0",
@@ -52,6 +69,12 @@ class TestReferenceApproval(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
+    def save_audit(self):
+        self.audit_path.write_text(
+            json.dumps(self.audit, indent=2),
+            encoding="utf-8",
+        )
+
     def save_registry(self):
         registry = {
             "registry_version": "1.1.0",
@@ -64,11 +87,16 @@ class TestReferenceApproval(unittest.TestCase):
             encoding="utf-8"
         )
 
+   
     def validate(self):
         self.save_registry()
+        self.save_audit()
+
         return validate_reference_approval(
-            self.registry_path
+            self.registry_path,
+            audit_path=self.audit_path,
         )
+
 
     def approve_home(self):
         self.home["status"] = "APPROVED"
@@ -100,9 +128,19 @@ class TestReferenceApproval(unittest.TestCase):
 
         self.assertEqual(self.validate(), [])
 
-    def test_approved_home_valid_metadata(self):
+   
+    def test_approved_home_without_audit_is_rejected(self):
         self.approve_home()
-        self.assertEqual(self.validate(), [])
+
+        errors = self.validate()
+
+        self.assertTrue(
+            any(
+                "No matching APPROVED audit decision" in error
+                for error in errors
+            )
+        )
+
 
     def test_missing_approval_authority_rejected(self):
         self.approve_home()
@@ -132,6 +170,175 @@ class TestReferenceApproval(unittest.TestCase):
 
         self.assertTrue(
             any("No assigned test cycles" in e for e in errors)
+        )
+
+   
+    def test_approved_home_requires_matching_audit(self):
+        validate_approval_audit_matches = (
+            module.validate_approval_audit_matches
+        )
+
+        registry = {
+
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-TEST-001",
+                    "test_home_version": "1.0.0",
+                    "status": "APPROVED",
+                    "approval": {
+                        "approved_by": "Test Approval Authority",
+                        "approval_date": "2026-11-18",
+                        "approval_record": "TEST-001",
+                    },
+                }
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "audit.json"
+
+            audit_path.write_text(
+                json.dumps(
+                    {
+                        "audit_schema_version": "1.0.0",
+                        "audit_status": "DEVELOPMENT",
+                        "records": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            errors = validate_approval_audit_matches(
+                registry,
+                audit_path=audit_path,
+            )
+
+        self.assertTrue(
+            any(
+                "No matching APPROVED audit decision" in error
+                for error in errors
+            )
+        )
+
+    def test_approved_home_accepts_matching_audit(self):
+        registry = {
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-TEST-001",
+                    "test_home_version": "1.0.0",
+                    "status": "APPROVED",
+                    "approval": {
+                        "approved_by": "Test Approval Authority",
+                        "approval_date": "2026-11-18",
+                        "approval_record": "TEST-001",
+                    },
+                }
+            ]
+        }
+
+        audit = {
+            "audit_schema_version": "1.0.0",
+            "audit_status": "DEVELOPMENT",
+            "records": [
+                {
+                    "record_id": "TEST-001",
+                    "reference_home_id": "BEEP-TEST-001",
+                    "reference_home_version": "1.0.0",
+                    "decision": "APPROVED",
+                    "reviewer": "Test Technical Reviewer",
+                    "approval_authority": "Test Approval Authority",
+                    "evidence": "TEST-EVIDENCE-001",
+                    "pull_request": "TEST-PR-001",
+                    "decision_date": "2026-11-18",
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "audit.json"
+
+            audit_path.write_text(
+                json.dumps(audit, indent=2),
+                encoding="utf-8",
+            )
+
+            errors = module.validate_approval_audit_matches(
+                registry,
+                audit_path=audit_path,
+            )
+
+        self.assertEqual(errors, [])
+
+    def test_mismatched_approval_record_id_rejected(self):
+        self.approve_home()
+
+        self.audit["records"] = [
+            {
+                "record_id": "DIFFERENT-APPROVAL-001",
+                "reference_home_id": "BEEP-HOME-001",
+                "reference_home_version": "1.0.0",
+                "decision": "APPROVED",
+                "reviewer": "Test Technical Reviewer",
+                "approval_authority": "BEEP Technical Committee",
+                "evidence": "TEST-EVIDENCE-001",
+                "pull_request": "TEST-PR-001",
+                "decision_date": "2026-11-17",
+            }
+        ]
+
+        errors = self.validate()
+
+        self.assertTrue(
+            any(
+                "No matching APPROVED audit decision" in error
+                for error in errors
+            )
+        )
+
+    def test_full_validator_accepts_matching_approval(self):
+        self.approve_home()
+
+        self.audit["records"] = [
+            {
+                "record_id": "BEEP-APPROVAL-001",
+                "reference_home_id": "BEEP-HOME-001",
+                "reference_home_version": "1.0.0",
+                "decision": "APPROVED",
+                "reviewer": "Test Technical Reviewer",
+                "approval_authority": "BEEP Technical Committee",
+                "evidence": "TEST-EVIDENCE-001",
+                "pull_request": "TEST-PR-001",
+                "decision_date": "2026-11-17",
+            }
+        ]
+
+        errors = self.validate()
+
+        self.assertEqual(errors, [])
+
+    def test_matching_audit_with_missing_reviewer_rejected(self):
+        self.approve_home()
+
+        self.audit["records"] = [
+            {
+                "record_id": "BEEP-APPROVAL-001",
+                "reference_home_id": "BEEP-HOME-001",
+                "reference_home_version": "1.0.0",
+                "decision": "APPROVED",
+                "approval_authority": "BEEP Technical Committee",
+                "evidence": "TEST-EVIDENCE-001",
+                "pull_request": "TEST-PR-001",
+                "decision_date": "2026-11-17",
+            }
+        ]
+
+        errors = self.validate()
+
+        self.assertTrue(
+            any(
+                "Missing reviewer" in error
+                for error in errors
+            )
         )
 
 

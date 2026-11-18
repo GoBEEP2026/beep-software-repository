@@ -3,6 +3,23 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
+import importlib.util
+
+AUDIT_VALIDATOR_PATH = (
+    Path(__file__).resolve().parent
+    / "validate_reference_audit.py"
+)
+
+audit_spec = importlib.util.spec_from_file_location(
+    "validate_reference_audit",
+    AUDIT_VALIDATOR_PATH,
+)
+
+audit_module = importlib.util.module_from_spec(audit_spec)
+audit_spec.loader.exec_module(audit_module)
+
+validate_audit = audit_module.validate_audit
+
 
 
 VALID_STATUSES = {
@@ -29,8 +46,93 @@ def valid_date(value):
     except ValueError:
         return False
 
+def validate_approval_audit_matches(
+    registry,
+    audit_path=None,
+):
+    """Verify approved reference homes have matching audit decisions."""
 
-def validate_reference_approval(registry_path=None):
+    if audit_path is None:
+        audit_path = (
+            Path(__file__).resolve().parent
+            / "reference-approval-audit.json"
+        )
+
+    approved_homes = [
+        home
+        for home in registry.get("reference_homes", [])
+        if isinstance(home, dict)
+        and home.get("status") == "APPROVED"
+    ]
+
+    if not approved_homes:
+        return []
+
+    audit_errors = validate_audit(audit_path)
+
+    if audit_errors:
+        return [
+            f"Invalid reference approval audit: {error}"
+            for error in audit_errors
+        ]
+
+    try:
+        audit = json.loads(
+            Path(audit_path).read_text(encoding="utf-8")
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        return [f"Unable to read reference approval audit: {exc}"]
+
+    if not isinstance(audit, dict):
+        return ["Reference approval audit must be a JSON object"]
+
+    records = audit.get("records")
+
+    if not isinstance(records, list):
+        return ["Reference approval audit records must be an array"]
+
+    errors = []
+
+    for home in approved_homes:
+        home_id = home.get("test_home_id")
+        version = home.get("test_home_version")
+        prefix = f"{home_id}/{version}"
+
+        approval = home.get("approval")
+
+        if not isinstance(approval, dict):
+            continue
+
+        matching_records = [
+            record
+            for record in records
+            if isinstance(record, dict)
+            and record.get("reference_home_id") == home_id
+            and record.get("reference_home_version") == version
+            and record.get("decision") == "APPROVED"
+            and record.get("record_id")
+                == approval.get("approval_record")
+            and record.get("approval_authority")
+                == approval.get("approved_by")
+
+            and record.get("decision_date")
+                == approval.get("approval_date")
+        ]
+
+        if not matching_records:
+            errors.append(
+                f"{prefix}: No matching APPROVED audit decision"
+            )
+
+    return errors
+
+
+
+def validate_reference_approval(
+    registry_path=None,
+    audit_path=None,
+):
+
     if registry_path is None:
         registry_path = (
             Path(__file__).resolve().parent
@@ -164,6 +266,15 @@ def validate_reference_approval(registry_path=None):
             errors.append(
                 f"{prefix}: Invalid test cycle identifier"
             )
+
+    
+    errors.extend(
+        validate_approval_audit_matches(
+            registry,
+            audit_path=audit_path,
+        )
+    )
+
 
     return errors
 
