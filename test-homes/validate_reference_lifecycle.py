@@ -49,6 +49,17 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
         Path(current_registry_path).read_text(encoding="utf-8")
     )
 
+    allowed_transitions = {
+        "DEVELOPMENT": {"DEVELOPMENT", "UNDER_REVIEW"},
+        "UNDER_REVIEW": {
+            "UNDER_REVIEW",
+            "DEVELOPMENT",
+            "APPROVED",
+        },
+        "APPROVED": {"APPROVED", "RETIRED"},
+        "RETIRED": {"RETIRED"},
+    }
+
     current_homes = {
         (home.get("test_home_id"), home.get("test_home_version")): home
         for home in current["reference_homes"]
@@ -59,9 +70,7 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
         if not isinstance(previous_home, dict):
             continue
 
-        if previous_home.get("status") != "APPROVED":
-            continue
-
+        
         home_id = previous_home.get("test_home_id")
         version = previous_home.get("test_home_version")
         key = (home_id, version)
@@ -73,6 +82,17 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
                 f"{home_id}/{version}: Approved version cannot be removed"
             )
             continue
+
+        previous_status = previous_home.get("status")
+        current_status = current_home.get("status")
+
+        if current_status not in allowed_transitions.get(
+            previous_status, set()
+        ):
+            errors.append(
+                f"{home_id}/{version}: Invalid lifecycle transition "
+                f"from {previous_status} to {current_status}"
+            )
 
         # Retirement is permitted, but approved metadata is preserved.
         permitted_statuses = {"APPROVED", "RETIRED"}
