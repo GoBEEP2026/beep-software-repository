@@ -29,6 +29,19 @@ class TestReferenceApproval(unittest.TestCase):
             self.folder / "reference-home-registry.json"
         )
 
+        self.audit_path = (
+            self.folder / "reference-approval-audit.json"
+        )
+
+        self.audit = {
+            "audit_schema_version": "1.0.0",
+            "repository": "BEEP Software Consistency Repository",
+            "audit_status": "DEVELOPMENT",
+            "records": [],
+        }
+
+        self.save_audit()
+
         self.home = {
             "test_home_id": "BEEP-HOME-001",
             "test_home_version": "1.0.0",
@@ -52,6 +65,12 @@ class TestReferenceApproval(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
+    def save_audit(self):
+        self.audit_path.write_text(
+            json.dumps(self.audit, indent=2),
+            encoding="utf-8",
+        )
+
     def save_registry(self):
         registry = {
             "registry_version": "1.1.0",
@@ -64,11 +83,16 @@ class TestReferenceApproval(unittest.TestCase):
             encoding="utf-8"
         )
 
+   
     def validate(self):
         self.save_registry()
+        self.save_audit()
+
         return validate_reference_approval(
-            self.registry_path
+            self.registry_path,
+            audit_path=self.audit_path,
         )
+
 
     def approve_home(self):
         self.home["status"] = "APPROVED"
