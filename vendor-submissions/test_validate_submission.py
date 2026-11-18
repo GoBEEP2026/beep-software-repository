@@ -542,12 +542,41 @@ class TestVendorSubmissionValidator(unittest.TestCase):
 
         self.generate_test_hashes()
 
+        # Create a temporary approval audit record.
+        audit_path = self.folder / "test-approval-audit.json"
+
+        audit = {
+            "audit_schema_version": "1.0.0",
+            "repository": "BEEP Software Consistency Repository",
+            "audit_status": "DEVELOPMENT",
+            "records": [
+                {
+                    "record_id": "TEST-APPROVAL-001",
+                    "reference_home_id": "BEEP-HOME-001",
+                    "reference_home_version": "1.0.0",
+                    "decision": "APPROVED",
+                    "reviewer": "Test Technical Reviewer",
+                    "approval_authority": "BEEP Test Approval Authority",
+                    "evidence": "TEST-EVIDENCE-001",
+                    "pull_request": "TEST-PR-001",
+                    "decision_date": "2026-11-17",
+                }
+            ],
+        }
+
+        audit_path.write_text(
+            json.dumps(audit, indent=2),
+            encoding="utf-8",
+        )
+
+        
         
         errors = validate_submission(
             self.folder,
             production=True,
             registry_path=registry_path,
-            approvals_directory=approvals_directory
+            approvals_directory=approvals_directory,
+            audit_path=audit_path,
         )
 
 
