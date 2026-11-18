@@ -98,14 +98,17 @@ class TestReferenceApproval(unittest.TestCase):
         )
 
 
+    
     def approve_home(self):
         self.home["status"] = "APPROVED"
         self.home["approval"] = {
-            "approved_by": "BEEP Technical Committee",
+            "approved_by": "B.E.E.P. Board of Directors",
             "approval_date": "2026-11-17",
-            "approval_record": "BEEP-APPROVAL-001"
+            "approval_record": "BEEP-APPROVAL-001",
+            "board_resolution_reference": "TEST-BOARD-RES-001"
         }
         self.home["test_cycles"] = ["2027-Q1"]
+
 
     def test_development_home_passes(self):
         self.assertEqual(self.validate(), [])
