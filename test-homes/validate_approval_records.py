@@ -2,7 +2,27 @@ import json
 import re
 import sys
 from pathlib import Path
-from validate_board_authorization import validate_board_authorization
+import importlib.util
+
+BOARD_VALIDATOR_PATH = (
+    Path(__file__).resolve().parent
+    / "validate_board_authorization.py"
+)
+
+board_spec = importlib.util.spec_from_file_location(
+    "beep_board_authorization",
+    BOARD_VALIDATOR_PATH,
+)
+
+if board_spec is None or board_spec.loader is None:
+    raise ImportError("Unable to load Board authorization validator")
+
+board_module = importlib.util.module_from_spec(board_spec)
+board_spec.loader.exec_module(board_module)
+
+validate_board_authorization = (
+    board_module.validate_board_authorization
+)
 
 
 APPROVAL_ID_PATTERN = re.compile(
