@@ -62,6 +62,13 @@ jobs:
             -p "test_validate_approval_records.py" \
             -v
 
+      - name: Run Board authorization unit tests
+        run: |
+          python -m unittest discover \
+            -s test-homes \
+            -p "test_validate_board_authorization.py" \
+            -v
+
       - name: Validate reference approval audit log
         run: python test-homes/validate_reference_audit.py
 
