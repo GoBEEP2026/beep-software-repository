@@ -188,6 +188,12 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
                         f"index {index} has missing or invalid {field}"
                     )
 
+    # Stop before building lookup keys if any registry
+    # entries have invalid identifiers or structures.
+    if errors:
+        return errors
+
+
     valid_statuses = {
         "DEVELOPMENT",
         "UNDER_REVIEW",
