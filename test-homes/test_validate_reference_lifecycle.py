@@ -243,6 +243,33 @@ class TestReferenceLifecycle(unittest.TestCase):
             )
         )
 
+    def test_invalid_lifecycle_status_rejected(self):
+        invalid_home = copy.deepcopy(self.home)
+        invalid_home["status"] = "ACTIVE"
+
+        self.previous_path.write_text(
+            json.dumps({"reference_homes": []}),
+            encoding="utf-8",
+        )
+
+        self.current_path.write_text(
+            json.dumps({"reference_homes": [invalid_home]}),
+            encoding="utf-8",
+        )
+
+        errors = validate_reference_lifecycle(
+            self.previous_path,
+            self.current_path,
+        )
+
+        self.assertTrue(
+            any(
+                "Current registry contains invalid "
+                "lifecycle status: ACTIVE" in error
+                for error in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
