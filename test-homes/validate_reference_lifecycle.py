@@ -22,6 +22,21 @@ def validate_approved_file_history(
     except (OSError, UnicodeError, ValueError) as exc:
         return [f"Unable to read previous registry: {exc}"]
 
+    if not isinstance(registry, dict):
+        return ["Previous registry must be a JSON object"]
+
+    if not isinstance(registry.get("reference_homes"), list):
+        return [
+            "Previous registry must contain a reference_homes array"
+        ]
+
+    for index, home in enumerate(registry["reference_homes"]):
+        if not isinstance(home, dict):
+            errors.append(
+                f"Previous registry contains malformed "
+                f"reference home at index {index}"
+            )
+
     repository_root = Path(__file__).resolve().parent.parent
 
     for home in registry.get("reference_homes", []):
