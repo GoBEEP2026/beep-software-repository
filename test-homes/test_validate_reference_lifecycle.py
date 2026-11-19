@@ -301,6 +301,48 @@ class TestReferenceLifecycle(unittest.TestCase):
                 for error in errors
             )
         )
+        
+    def test_malformed_approved_file_reference_rejected(self):
+        repo = self.folder / "repo"
+        home_dir = repo / "test-homes"
+        home_dir.mkdir(parents=True)
+
+        subprocess.run(
+            ["git", "init", "-q", str(repo)],
+            check=True,
+        )
+
+        base_commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo,
+            text=True,
+        ).strip() if False else "HEAD"
+
+        self.home["status"] = "APPROVED"
+        self.home["reference_files"] = [None]
+
+        self.previous_path.write_text(
+            json.dumps({"reference_homes": [self.home]}),
+            encoding="utf-8",
+        )
+
+        with patch.object(
+            module_under_test.Path,
+            "resolve",
+            return_value=home_dir / "validate_reference_lifecycle.py",
+        ):
+            errors = module_under_test.validate_approved_file_history(
+                self.previous_path,
+                base_commit,
+            )
+
+        self.assertTrue(
+            any(
+                "Invalid reference file entry" in error
+                for error in errors
+            )
+        )
+
     def test_modified_approved_file_rejected(self):
         repo = self.folder / "repo"
         home_dir = repo / "test-homes"
