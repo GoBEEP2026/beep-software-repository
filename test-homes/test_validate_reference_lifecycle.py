@@ -603,6 +603,38 @@ class TestReferenceLifecycle(unittest.TestCase):
                     f"Expected {expected_error!r}, got {errors!r}",
                 )
 
+    def test_unhashable_reference_home_identifiers_rejected(self):
+        for field in ("test_home_id", "test_home_version"):
+            with self.subTest(field=field):
+                invalid_home = {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                    "status": "DEVELOPMENT",
+                }
+                invalid_home[field] = ["invalid", "identifier"]
+
+                self.previous_path.write_text(
+                    json.dumps({"reference_homes": []}),
+                    encoding="utf-8",
+                )
+                self.current_path.write_text(
+                    json.dumps({"reference_homes": [invalid_home]}),
+                    encoding="utf-8",
+                )
+
+                errors = validate_reference_lifecycle(
+                    self.previous_path,
+                    self.current_path,
+                )
+
+                self.assertTrue(
+                    any(
+                        f"missing or invalid {field}" in error
+                        for error in errors
+                    ),
+                    f"Expected validation error for {field}: {errors}",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
