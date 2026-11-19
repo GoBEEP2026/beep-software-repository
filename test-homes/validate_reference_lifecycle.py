@@ -143,6 +143,23 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
                     f"reference home at index {index}"
                 )
 
+    for label, registry in (
+        ("Previous", previous),
+        ("Current", current),
+    ):
+        for index, home in enumerate(registry["reference_homes"]):
+            if not isinstance(home, dict):
+                continue
+
+            for field in ("test_home_id", "test_home_version"):
+                value = home.get(field)
+
+                if not isinstance(value, str) or not value.strip():
+                    errors.append(
+                        f"{label} registry reference home at "
+                        f"index {index} has missing or invalid {field}"
+                    )
+
     valid_statuses = {
         "DEVELOPMENT",
         "UNDER_REVIEW",
