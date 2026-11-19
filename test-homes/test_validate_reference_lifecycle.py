@@ -211,6 +211,38 @@ class TestReferenceLifecycle(unittest.TestCase):
             )
         )
 
+    def test_duplicate_reference_home_version_rejected(self):
+        first_home = copy.deepcopy(self.home)
+        second_home = copy.deepcopy(self.home)
+
+        self.previous_path.write_text(
+            json.dumps({"reference_homes": []}),
+            encoding="utf-8",
+        )
+
+        self.current_path.write_text(
+            json.dumps({
+                "reference_homes": [
+                    first_home,
+                    second_home,
+                ]
+            }),
+            encoding="utf-8",
+        )
+
+        errors = validate_reference_lifecycle(
+            self.previous_path,
+            self.current_path,
+        )
+
+        self.assertTrue(
+            any(
+                "Current registry contains duplicate "
+                "reference home version" in error
+                for error in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
