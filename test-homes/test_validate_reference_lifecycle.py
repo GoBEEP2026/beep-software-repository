@@ -502,6 +502,34 @@ class TestReferenceLifecycle(unittest.TestCase):
             )
         )
 
+    def test_missing_reference_home_identifiers_rejected(self):
+        for field in ("test_home_id", "test_home_version"):
+            with self.subTest(field=field):
+                invalid_home = copy.deepcopy(self.home)
+                invalid_home.pop(field)
+
+                self.previous_path.write_text(
+                    json.dumps({"reference_homes": []}),
+                    encoding="utf-8",
+                )
+
+                self.current_path.write_text(
+                    json.dumps({"reference_homes": [invalid_home]}),
+                    encoding="utf-8",
+                )
+
+                errors = validate_reference_lifecycle(
+                    self.previous_path,
+                    self.current_path,
+                )
+
+                self.assertTrue(
+                    any(
+                        f"missing or invalid {field}" in error
+                        for error in errors
+                    )
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
