@@ -132,6 +132,29 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
         Path(current_registry_path).read_text(encoding="utf-8")
     )
 
+    valid_statuses = {
+        "DEVELOPMENT",
+        "UNDER_REVIEW",
+        "APPROVED",
+        "RETIRED",
+    }
+
+    for label, registry in (
+        ("Previous", previous),
+        ("Current", current),
+    ):
+        for home in registry["reference_homes"]:
+            if not isinstance(home, dict):
+                continue
+
+            status = home.get("status")
+
+            if status not in valid_statuses:
+                errors.append(
+                    f"{label} registry contains invalid "
+                    f"lifecycle status: {status}"
+                )
+
     for label, registry in (
         ("Previous", previous),
         ("Current", current),
