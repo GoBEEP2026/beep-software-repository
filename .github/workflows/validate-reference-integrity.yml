@@ -23,7 +23,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -38,6 +39,13 @@ jobs:
           python -m unittest discover \
             -s test-homes \
             -p "test_validate_reference_integrity.py" \
+            -v
+
+      - name: Run reference lifecycle unit tests
+        run: |
+          python -m unittest discover \
+            -s test-homes \
+            -p "test_validate_reference_lifecycle.py" \
             -v
 
       - name: Validate reference home approvals
@@ -94,3 +102,25 @@ jobs:
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
           git show "${BASE_SHA}:test-homes/reference-approval-audit.json" > /tmp/beep-previous-approval-audit.json
           python test-homes/validate_audit_append_only.py /tmp/beep-previous-approval-audit.json
+
+      
+      - name: Prepare previous reference home registry
+        if: always() && github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git show "${BASE_SHA}:test-homes/reference-home-registry.json" > /tmp/beep-previous-reference-registry.json
+          python -m json.tool /tmp/beep-previous-reference-registry.json > /dev/null
+
+      
+      
+      - name: Validate reference home lifecycle transitions
+        if: always() && github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python test-homes/validate_reference_lifecycle.py \
+            /tmp/beep-previous-reference-registry.json \
+            test-homes/reference-home-registry.json \
+            "$BASE_SHA"
+
