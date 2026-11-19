@@ -183,6 +183,34 @@ class TestReferenceLifecycle(unittest.TestCase):
             )
         )
 
+    def test_new_reference_home_cannot_start_approved(self):
+        new_home = copy.deepcopy(self.home)
+        new_home["test_home_id"] = "BEEP-HOME-002"
+        new_home["status"] = "APPROVED"
+
+        self.previous_path.write_text(
+            json.dumps({"reference_homes": []}),
+            encoding="utf-8",
+        )
+
+        self.current_path.write_text(
+            json.dumps({"reference_homes": [new_home]}),
+            encoding="utf-8",
+        )
+
+        errors = validate_reference_lifecycle(
+            self.previous_path,
+            self.current_path,
+        )
+
+        self.assertTrue(
+            any(
+                "New reference home must begin in DEVELOPMENT"
+                in error
+                for error in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
