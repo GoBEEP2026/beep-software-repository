@@ -477,6 +477,30 @@ class TestReferenceLifecycle(unittest.TestCase):
             )
         )
 
+    def test_malformed_reference_home_entry_rejected(self):
+        self.previous_path.write_text(
+            json.dumps({"reference_homes": []}),
+            encoding="utf-8",
+        )
+
+        self.current_path.write_text(
+            json.dumps({"reference_homes": [None]}),
+            encoding="utf-8",
+        )
+
+        errors = validate_reference_lifecycle(
+            self.previous_path,
+            self.current_path,
+        )
+
+        self.assertTrue(
+            any(
+                "Current registry contains malformed "
+                "reference home at index 0" in error
+                for error in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
