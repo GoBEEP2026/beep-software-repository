@@ -123,7 +123,64 @@ class TestReferenceLifecycle(unittest.TestCase):
                 for error in errors
             )
         )
+ def test_deleted_retired_file_rejected(self):
+        repo = self.folder / "repo"
+        home_dir = repo / "test-homes"
+        home_dir.mkdir(parents=True)
 
+        reference_file = home_dir / "sample-home.xml"
+        reference_file.write_bytes(b"original approved content")
+
+        subprocess.run(
+            ["git", "init", "-q", str(repo)],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "add", "."],
+            cwd=repo,
+            check=True,
+        )
+        subprocess.run(
+            [
+                "git", "-c", "user.name=BEEP Test",
+                "-c", "user.email=test@example.invalid",
+                "commit", "-q", "-m", "Baseline",
+            ],
+            cwd=repo,
+            check=True,
+        )
+
+        base_commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo,
+            text=True,
+        ).strip()
+
+        self.home["status"] = "RETIRED"
+
+        self.previous_path.write_text(
+            json.dumps({"reference_homes": [self.home]}),
+            encoding="utf-8",
+        )
+
+        reference_file.unlink()
+
+        with patch.object(
+            module_under_test.Path,
+            "resolve",
+            return_value=home_dir / "validate_reference_lifecycle.py",
+        ):
+            errors = module_under_test.validate_approved_file_history(
+                self.previous_path,
+                base_commit,
+            )
+
+        self.assertTrue(
+            any(
+                "reference file cannot be modified" in error
+                for error in errors
+            )
+        )
     def test_deleted_approved_file_rejected(self):
         repo = self.folder / "repo"
         home_dir = repo / "test-homes"
