@@ -58,6 +58,8 @@ def validate_approved_file_history(
             )
             continue
 
+        seen_filenames = set()
+
         for entry in reference_files:
             if not isinstance(entry, dict):
                 errors.append(
@@ -80,6 +82,16 @@ def validate_approved_file_history(
                     f"{home_id}/{version}: Invalid reference filename"
                 )
                 continue
+
+            if filename in seen_filenames:
+                errors.append(
+                    f"{home_id}/{version}: Duplicate reference "
+                    f"filename: {filename}"
+                )
+                continue
+
+            seen_filenames.add(filename)
+
 
             relative_path = f"test-homes/{filename}"
             current_path = repository_root / relative_path
