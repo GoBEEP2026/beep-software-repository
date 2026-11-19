@@ -132,6 +132,17 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
         Path(current_registry_path).read_text(encoding="utf-8")
     )
 
+    for label, registry in (
+        ("Previous", previous),
+        ("Current", current),
+    ):
+        for index, home in enumerate(registry["reference_homes"]):
+            if not isinstance(home, dict):
+                errors.append(
+                    f"{label} registry contains malformed "
+                    f"reference home at index {index}"
+                )
+
     valid_statuses = {
         "DEVELOPMENT",
         "UNDER_REVIEW",
