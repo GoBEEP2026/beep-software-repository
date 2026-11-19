@@ -111,8 +111,9 @@ jobs:
           python -m json.tool /tmp/beep-previous-reference-registry.json > /dev/null
 
       
+      
       - name: Validate reference home lifecycle transitions
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
