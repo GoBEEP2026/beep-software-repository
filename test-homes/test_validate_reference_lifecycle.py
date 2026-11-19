@@ -572,6 +572,37 @@ class TestReferenceLifecycle(unittest.TestCase):
                     )
                 )
 
+    def test_malformed_historical_registry_rejected(self):
+        invalid_registries = [
+            ([], "Previous registry must be a JSON object"),
+            ({}, "Previous registry must contain a reference_homes array"),
+            (
+                {"reference_homes": None},
+                "Previous registry must contain a reference_homes array",
+            ),
+            (
+                {"reference_homes": [None]},
+                "Previous registry contains malformed reference home at index 0",
+            ),
+        ]
+
+        for registry, expected_error in invalid_registries:
+            with self.subTest(registry=registry):
+                self.previous_path.write_text(
+                    json.dumps(registry),
+                    encoding="utf-8",
+                )
+
+                errors = module_under_test.validate_approved_file_history(
+                    self.previous_path,
+                    "HEAD",
+                )
+
+                self.assertTrue(
+                    any(expected_error in error for error in errors),
+                    f"Expected {expected_error!r}, got {errors!r}",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
