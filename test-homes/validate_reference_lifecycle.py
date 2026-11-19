@@ -34,9 +34,22 @@ def validate_approved_file_history(
         home_id = home.get("test_home_id")
         version = home.get("test_home_version")
 
-        for entry in home.get("reference_files", []):
+       
+        reference_files = home.get("reference_files")
+
+        if not isinstance(reference_files, list):
+            errors.append(
+                f"{home_id}/{version}: reference_files must be a list"
+            )
+            continue
+
+        for entry in reference_files:
             if not isinstance(entry, dict):
+                errors.append(
+                    f"{home_id}/{version}: Invalid reference file entry"
+                )
                 continue
+
 
             filename = entry.get("filename")
 
