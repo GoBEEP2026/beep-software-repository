@@ -1,11 +1,12 @@
+import subprocess
+from unittest.mock import patch
 import copy
 import json
 import tempfile
 import unittest
 from pathlib import Path
-
 from validate_reference_lifecycle import validate_reference_lifecycle
-
+import validate_reference_lifecycle as module_under_test
 
 class TestReferenceLifecycle(unittest.TestCase):
 
@@ -119,6 +120,65 @@ class TestReferenceLifecycle(unittest.TestCase):
             any(
                 "Invalid lifecycle transition from "
                 "DEVELOPMENT to APPROVED" in error
+                for error in errors
+            )
+        )
+
+    def test_modified_approved_file_rejected(self):
+        repo = self.folder / "repo"
+        home_dir = repo / "test-homes"
+        home_dir.mkdir(parents=True)
+
+        reference_file = home_dir / "sample-home.xml"
+        reference_file.write_bytes(b"original approved content")
+
+        subprocess.run(
+            ["git", "init", "-q", str(repo)],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "add", "."],
+            cwd=repo,
+            check=True,
+        )
+        subprocess.run(
+            [
+                "git", "-c", "user.name=BEEP Test",
+                "-c", "user.email=test@example.invalid",
+                "commit", "-q", "-m", "Baseline",
+            ],
+            cwd=repo,
+            check=True,
+        )
+
+        base_commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo,
+            text=True,
+        ).strip()
+
+        self.home["status"] = "APPROVED"
+
+        self.previous_path.write_text(
+            json.dumps({"reference_homes": [self.home]}),
+            encoding="utf-8",
+        )
+
+        reference_file.write_bytes(b"unauthorized changed content")
+
+        with patch.object(
+            module_under_test.Path,
+            "resolve",
+            return_value=home_dir / "validate_reference_lifecycle.py",
+        ):
+            errors = module_under_test.validate_approved_file_history(
+                self.previous_path,
+                base_commit,
+            )
+
+        self.assertTrue(
+            any(
+                "reference file cannot be modified" in error
                 for error in errors
             )
         )
