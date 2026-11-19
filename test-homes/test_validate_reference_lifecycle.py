@@ -242,7 +242,8 @@ class TestReferenceLifecycle(unittest.TestCase):
                 for error in errors
             )
         )
-     def test_modified_retired_file_rejected(self):
+        
+    def test_modified_retired_file_rejected(self):
         repo = self.folder / "repo"
         home_dir = repo / "test-homes"
         home_dir.mkdir(parents=True)
