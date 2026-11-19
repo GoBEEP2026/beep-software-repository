@@ -90,6 +90,23 @@ class TestReferenceLifecycle(unittest.TestCase):
         )
 
 
+    def test_modifying_retired_home_metadata_rejected(self):
+        self.home["status"] = "RETIRED"
+        self.home["conditioned_floor_area_ft2"] = 2200
+
+        current = copy.deepcopy(self.home)
+        current["conditioned_floor_area_ft2"] = 2500
+
+        errors = self.validate(current)
+
+        self.assertTrue(
+            any(
+                "Approved or retired reference home metadata "
+                "cannot be modified" in error
+                for error in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
