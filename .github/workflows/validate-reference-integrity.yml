@@ -102,8 +102,9 @@ jobs:
           git show "${BASE_SHA}:test-homes/reference-approval-audit.json" > /tmp/beep-previous-approval-audit.json
           python test-homes/validate_audit_append_only.py /tmp/beep-previous-approval-audit.json
 
+      
       - name: Prepare previous reference home registry
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
