@@ -149,6 +149,20 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
         if isinstance(home, dict)
     }
 
+    previous_keys = {
+        (home.get("test_home_id"), home.get("test_home_version"))
+        for home in previous["reference_homes"]
+        if isinstance(home, dict)
+    }
+
+    for key, current_home in current_homes.items():
+        if key not in previous_keys:
+            if current_home.get("status") != "DEVELOPMENT":
+                errors.append(
+                    f"{key[0]}/{key[1]}: New reference home "
+                    "must begin in DEVELOPMENT"
+                )
+
     for previous_home in previous["reference_homes"]:
         if not isinstance(previous_home, dict):
             continue
