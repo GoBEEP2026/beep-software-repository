@@ -446,6 +446,20 @@ class TestReferenceLifecycle(unittest.TestCase):
             )
         )
 
+    def test_removing_approved_file_reference_rejected(self):
+        current = copy.deepcopy(self.home)
+        current["reference_files"] = []
+
+        errors = self.validate(current)
+
+        self.assertTrue(
+            any(
+                "Approved or retired reference home metadata "
+                "cannot be modified" in error
+                for error in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
