@@ -132,6 +132,29 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
         Path(current_registry_path).read_text(encoding="utf-8")
     )
 
+    for label, registry in (
+        ("Previous", previous),
+        ("Current", current),
+    ):
+        seen = set()
+
+        for home in registry["reference_homes"]:
+            if not isinstance(home, dict):
+                continue
+
+            key = (
+                home.get("test_home_id"),
+                home.get("test_home_version"),
+            )
+
+            if key in seen:
+                errors.append(
+                    f"{label} registry contains duplicate "
+                    f"reference home version: {key[0]}/{key[1]}"
+                )
+
+            seen.add(key)
+
     allowed_transitions = {
         "DEVELOPMENT": {"DEVELOPMENT", "UNDER_REVIEW"},
         "UNDER_REVIEW": {
