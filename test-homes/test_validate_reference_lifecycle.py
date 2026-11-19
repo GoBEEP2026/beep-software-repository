@@ -635,6 +635,49 @@ class TestReferenceLifecycle(unittest.TestCase):
                     f"Expected validation error for {field}: {errors}",
                 )
 
+    def test_duplicate_approved_reference_filenames_rejected(self):
+        repo = self.folder / "repo"
+        home_dir = repo / "test-homes"
+        home_dir.mkdir(parents=True)
+
+        subprocess.run(
+            ["git", "init", "-q", str(repo)],
+            check=True,
+        )
+
+        home = {
+            "test_home_id": "BEEP-HOME-TEST",
+            "test_home_version": "1.0.0",
+            "status": "APPROVED",
+            "reference_files": [
+                {"filename": "sample-home.json"},
+                {"filename": "sample-home.json"},
+            ],
+        }
+
+        self.previous_path.write_text(
+            json.dumps({"reference_homes": [home]}),
+            encoding="utf-8",
+        )
+
+        with patch.object(
+            module_under_test.Path,
+            "resolve",
+            return_value=home_dir / "validate_reference_lifecycle.py",
+        ):
+            errors = module_under_test.validate_approved_file_history(
+                self.previous_path,
+                "HEAD",
+            )
+
+        self.assertTrue(
+            any(
+                "Duplicate reference filename: sample-home.json" in error
+                for error in errors
+            ),
+            f"Expected duplicate filename error, got: {errors}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
