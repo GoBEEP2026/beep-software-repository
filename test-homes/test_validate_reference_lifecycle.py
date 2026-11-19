@@ -107,6 +107,22 @@ class TestReferenceLifecycle(unittest.TestCase):
             )
         )
 
+    def test_development_cannot_skip_review(self):
+        self.home["status"] = "DEVELOPMENT"
+
+        current = copy.deepcopy(self.home)
+        current["status"] = "APPROVED"
+
+        errors = self.validate(current)
+
+        self.assertTrue(
+            any(
+                "Invalid lifecycle transition from "
+                "DEVELOPMENT to APPROVED" in error
+                for error in errors
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
