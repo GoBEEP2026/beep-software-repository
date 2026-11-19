@@ -1,6 +1,89 @@
 import json
+import subprocess
 import sys
 from pathlib import Path
+
+
+def validate_approved_file_history(
+    previous_registry_path,
+    base_commit,
+):
+    """
+    Compare approved reference files with their contents
+    in the base Git commit.
+    """
+
+    errors = []
+
+    try:
+        registry = json.loads(
+            Path(previous_registry_path).read_text(encoding="utf-8")
+        )
+    except (OSError, UnicodeError, ValueError) as exc:
+        return [f"Unable to read previous registry: {exc}"]
+
+    repository_root = Path(__file__).resolve().parent.parent
+
+    for home in registry.get("reference_homes", []):
+        if not isinstance(home, dict):
+            continue
+
+        if home.get("status") not in ("APPROVED", "RETIRED"):
+            continue
+
+        home_id = home.get("test_home_id")
+        version = home.get("test_home_version")
+
+        for entry in home.get("reference_files", []):
+            if not isinstance(entry, dict):
+                continue
+
+            filename = entry.get("filename")
+
+            if (
+                not isinstance(filename, str)
+                or not filename
+                or Path(filename).name != filename
+                or filename in (".", "..")
+                or "/" in filename
+                or "\\" in filename
+            ):
+                errors.append(
+                    f"{home_id}/{version}: Invalid reference filename"
+                )
+                continue
+
+            relative_path = f"test-homes/{filename}"
+            current_path = repository_root / relative_path
+
+            try:
+                previous_bytes = subprocess.run(
+                    [
+                        "git", "show",
+                        f"{base_commit}:{relative_path}",
+                    ],
+                    cwd=repository_root,
+                    capture_output=True,
+                    check=True,
+                ).stdout
+            except subprocess.CalledProcessError:
+                errors.append(
+                    f"{home_id}/{version}: Cannot read historical "
+                    f"reference file {filename}"
+                )
+                continue
+
+            if (
+                not current_path.is_file()
+                or current_path.is_symlink()
+                or current_path.read_bytes() != previous_bytes
+            ):
+                errors.append(
+                    f"{home_id}/{version}: Approved or retired "
+                    f"reference file cannot be modified: {filename}"
+                )
+
+    return errors
 
 
 def validate_reference_lifecycle(previous_registry_path, current_registry_path):
