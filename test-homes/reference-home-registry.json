@@ -7,7 +7,7 @@
       "test_home_version": "1.0.0",
       "name": "B.E.E.P. Sample Reference Home",
       "description": "Development reference home for testing vendor submission and comparison workflows.",
-      "status": "DEVELOPMENT",
+      "status": "APPROVED",
       "building_type": "SINGLE_FAMILY_DETACHED",
       "conditioned_floor_area_ft2": 2200,
       "conditioned_volume_ft3": 19800,
