@@ -258,17 +258,30 @@ def validate_reference_lifecycle(previous_registry_path, current_registry_path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+       if len(sys.argv) not in (3, 4):
         print(
             "Usage: python validate_reference_lifecycle.py "
-            "<previous-registry> <current-registry>"
+            "<previous-registry> <current-registry> "
+            "[base-commit]"
         )
         sys.exit(2)
 
+    
     validation_errors = validate_reference_lifecycle(
         sys.argv[1],
         sys.argv[2],
     )
+
+    # When a Git base commit is provided, also protect
+    # approved and retired reference-file contents.
+    if len(sys.argv) == 4:
+        validation_errors.extend(
+            validate_approved_file_history(
+                sys.argv[1],
+                sys.argv[3],
+            )
+        )
+
 
     if validation_errors:
         print("REFERENCE HOME LIFECYCLE VALIDATION FAILED")
