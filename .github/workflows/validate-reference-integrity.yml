@@ -110,9 +110,14 @@ jobs:
           git show "${BASE_SHA}:test-homes/reference-home-registry.json" > /tmp/beep-previous-reference-registry.json
           python -m json.tool /tmp/beep-previous-reference-registry.json > /dev/null
 
+      
       - name: Validate reference home lifecycle transitions
         if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           python test-homes/validate_reference_lifecycle.py \
             /tmp/beep-previous-reference-registry.json \
-            test-homes/reference-home-registry.json
+            test-homes/reference-home-registry.json \
+            "$BASE_SHA"
+
