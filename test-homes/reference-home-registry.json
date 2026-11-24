@@ -1,17 +1,8 @@
 {
   "registry_version": "1.1.0",
   "registry_status": "DEVELOPMENT",
-  "reference_homes": [
-    {
-      "test_home_id": "BEEP-HOME-001",
-      "test_home_version": "1.0.0",
-      "name": "B.E.E.P. Sample Reference Home",
-      "description": "Development reference home for testing vendor submission and comparison workflows.",
-      "status": "DEVELOPMENT",
-      "building_type": "SINGLE_FAMILY_DETACHED",
-      "conditioned_floor_area_ft2": 2200,
-      "conditioned_volume_ft3": 19800,
-      "bedrooms": 3,
+  "reference_homes": []
+   
      
 "reference_files": [
   {
