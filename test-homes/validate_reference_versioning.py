@@ -88,6 +88,35 @@ def validate_reference_versioning(registry_path):
                 "Expected MAJOR.MINOR.PATCH format."
             )
 
+    # Require an initial version of 1.0.0 for each home.
+    home_versions = {}
+
+    for home in homes:
+        if not isinstance(home, dict):
+            continue
+
+        home_id = home.get("test_home_id")
+        version = home.get("test_home_version")
+
+        if not isinstance(home_id, str) or not home_id.strip():
+            errors.append(
+                "Reference home has a missing or invalid ID"
+            )
+            continue
+
+        if not is_valid_version(version):
+            continue
+
+        home_versions.setdefault(home_id, set()).add(version)
+
+    for home_id, versions in home_versions.items():
+        if "1.0.0" not in versions:
+            errors.append(
+                f"{home_id}: Initial reference home version "
+                "must be 1.0.0"
+            )
+
+
     return errors
 
 
