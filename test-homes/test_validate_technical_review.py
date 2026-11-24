@@ -7,7 +7,9 @@ from validate_technical_review import (
     calculate_technical_fingerprint,
     validate_review_status,
     validate_review_documentation,
+    validate_review_fingerprint,
 )
+
 
 
 
@@ -906,6 +908,345 @@ class TestTechnicalReviewDocumentation(unittest.TestCase):
         validate_review_documentation(home)
 
         self.assertEqual(home, original)
+
+
+
+class TestTechnicalReviewFingerprintEnforcement(
+    unittest.TestCase
+):
+
+    def make_home(
+        self,
+        lifecycle="UNDER_REVIEW",
+        review_status="COMPLETED",
+    ):
+        home = {
+            "test_home_id": "BEEP-HOME-TEST",
+            "test_home_version": "1.0.0",
+            "parent_version": None,
+            "status": lifecycle,
+            "building_type": "SINGLE_FAMILY_DETACHED",
+            "conditioned_floor_area_ft2": 2200,
+            "conditioned_volume_ft3": 19800,
+            "bedrooms": 3,
+            "wall_insulation_r_value": 15,
+            "ceiling_insulation_r_value": 49,
+            "reference_files": [
+                {
+                    "filename": "test-home.xml",
+                    "sha256": "a" * 64,
+                }
+            ],
+            "approved_compliance_paths": [
+                "ERI",
+                "R405",
+            ],
+            "version_history": [
+                {
+                    "version": "1.0.0",
+                    "change_type": "INITIAL",
+                    "description": "Initial test version.",
+                }
+            ],
+            "test_cycles": [],
+            "approval": {
+                "approved_by": None,
+            },
+            "review": {
+                "reviewer": None,
+                "review_record": None,
+                "review_status": review_status,
+                "review_date": None,
+                "review_findings": None,
+                "review_recommendation": None,
+                "conflict_of_interest_disclosure": None,
+                "reviewed_content_sha256": None,
+            },
+        }
+
+        review = home["review"]
+
+        if review_status in (
+            "IN_PROGRESS",
+            "COMPLETED",
+        ):
+            review.update({
+                "reviewer": "Test Reviewer",
+                "review_record": "BEEP-REV-TEST-001",
+                "conflict_of_interest_disclosure":
+                    "No conflicts identified.",
+            })
+
+        if review_status == "COMPLETED":
+            review.update({
+                "review_date": "2026-11-24",
+                "review_findings":
+                    "Technical review completed.",
+                "review_recommendation":
+                    "RECOMMEND_APPROVAL",
+                "reviewed_content_sha256":
+                    calculate_technical_fingerprint(home),
+            })
+
+        return home
+
+    def assert_fingerprint_mismatch(self, home):
+        errors = validate_review_fingerprint(home)
+
+        self.assertTrue(
+            any(
+                "does not match the completed review"
+                in error
+                for error in errors
+            ),
+            errors,
+        )
+
+    def test_not_started_review_accepted(self):
+        home = self.make_home(
+            "DEVELOPMENT",
+            "NOT_STARTED",
+        )
+
+        self.assertEqual(
+            validate_review_fingerprint(home),
+            [],
+        )
+
+    def test_in_progress_review_accepted(self):
+        home = self.make_home(
+            "UNDER_REVIEW",
+            "IN_PROGRESS",
+        )
+
+        self.assertEqual(
+            validate_review_fingerprint(home),
+            [],
+        )
+
+    def test_completed_matching_fingerprint_accepted(self):
+        home = self.make_home()
+
+        self.assertEqual(
+            validate_review_fingerprint(home),
+            [],
+        )
+
+    def test_completed_mismatched_fingerprint_rejected(self):
+        home = self.make_home()
+
+        home["review"]["reviewed_content_sha256"] = (
+            "0" * 64
+        )
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_floor_area_change_rejected(self):
+        home = self.make_home()
+        home["conditioned_floor_area_ft2"] = 2300
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_conditioned_volume_change_rejected(self):
+        home = self.make_home()
+        home["conditioned_volume_ft3"] = 20000
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_bedroom_count_change_rejected(self):
+        home = self.make_home()
+        home["bedrooms"] = 4
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_wall_insulation_change_rejected(self):
+        home = self.make_home()
+        home["wall_insulation_r_value"] = 13
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_ceiling_insulation_change_rejected(self):
+        home = self.make_home()
+        home["ceiling_insulation_r_value"] = 38
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_reference_filename_change_rejected(self):
+        home = self.make_home()
+
+        home["reference_files"][0]["filename"] = (
+            "modified-home.xml"
+        )
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_reference_checksum_change_rejected(self):
+        home = self.make_home()
+
+        home["reference_files"][0]["sha256"] = (
+            "b" * 64
+        )
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_version_change_rejected(self):
+        home = self.make_home()
+        home["test_home_version"] = "1.0.1"
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_change_documentation_modified_rejected(self):
+        home = self.make_home()
+
+        home["version_history"][0]["description"] = (
+            "Modified version documentation."
+        )
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_compliance_path_change_rejected(self):
+        home = self.make_home()
+
+        home["approved_compliance_paths"] = [
+            "ERI",
+        ]
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_new_technical_field_rejected(self):
+        home = self.make_home()
+        home["window_u_factor"] = 0.30
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_removed_technical_field_rejected(self):
+        home = self.make_home()
+        del home["wall_insulation_r_value"]
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_approval_metadata_change_accepted(self):
+        home = self.make_home()
+
+        home["approval"] = {
+            "approved_by": "Test Authority",
+            "approval_date": "2026-11-24",
+        }
+
+        self.assertEqual(
+            validate_review_fingerprint(home),
+            [],
+        )
+
+    def test_test_cycle_assignment_accepted(self):
+        home = self.make_home()
+
+        home["test_cycles"] = [
+            "TEST-CYCLE-001",
+        ]
+
+        self.assertEqual(
+            validate_review_fingerprint(home),
+            [],
+        )
+
+    def test_approved_matching_fingerprint_accepted(self):
+        home = self.make_home("APPROVED")
+
+        self.assertEqual(
+            validate_review_fingerprint(home),
+            [],
+        )
+
+    def test_approved_mismatched_fingerprint_rejected(self):
+        home = self.make_home("APPROVED")
+        home["conditioned_floor_area_ft2"] = 2500
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_retired_matching_fingerprint_accepted(self):
+        home = self.make_home("RETIRED")
+
+        self.assertEqual(
+            validate_review_fingerprint(home),
+            [],
+        )
+
+    def test_retired_mismatched_fingerprint_rejected(self):
+        home = self.make_home("RETIRED")
+        home["conditioned_volume_ft3"] = 21000
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_revisions_required_matching_fingerprint(self):
+        home = self.make_home()
+
+        home["review"]["review_recommendation"] = (
+            "REVISIONS_REQUIRED"
+        )
+
+        self.assertEqual(
+            validate_review_fingerprint(home),
+            [],
+        )
+
+    def test_revisions_required_mismatch_rejected(self):
+        home = self.make_home()
+
+        home["review"]["review_recommendation"] = (
+            "REVISIONS_REQUIRED"
+        )
+
+        home["wall_insulation_r_value"] = 20
+
+        self.assert_fingerprint_mismatch(home)
+
+    def test_invalid_review_documentation_rejected(self):
+        home = self.make_home()
+        home["review"]["reviewer"] = None
+
+        self.assertTrue(
+            validate_review_fingerprint(home)
+        )
+
+    def test_nonfinite_technical_values_rejected(self):
+        for invalid in (
+            float("nan"),
+            float("inf"),
+            float("-inf"),
+        ):
+            with self.subTest(value=invalid):
+                home = self.make_home()
+
+                home["conditioned_floor_area_ft2"] = (
+                    invalid
+                )
+
+                errors = validate_review_fingerprint(home)
+
+                self.assertTrue(
+                    any(
+                        "Unable to calculate" in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+    def test_invalid_reference_home_rejected(self):
+        for invalid in (None, [], "", 123, True):
+            with self.subTest(value=invalid):
+                self.assertTrue(
+                    validate_review_fingerprint(invalid)
+                )
+
+    def test_original_reference_home_not_modified(self):
+        home = self.make_home()
+        original = copy.deepcopy(home)
+
+        validate_review_fingerprint(home)
+
+        self.assertEqual(home, original)
+
 
 
 
