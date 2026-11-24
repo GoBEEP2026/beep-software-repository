@@ -4,12 +4,15 @@ import unittest
 from pathlib import Path
 
 
+
 from validate_reference_versioning import (
     is_valid_version,
     parse_version,
     get_version_change_type,
+    validate_parent_versions,
     validate_reference_versioning,
 )
+
 
 
 
@@ -356,6 +359,167 @@ class TestReferenceVersioning(unittest.TestCase):
                         for error in errors
                     )
                 )
+
+
+
+    def test_initial_version_without_parent_accepted(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            }
+        ]
+
+        self.assertEqual(validate_parent_versions(homes), [])
+
+    def test_initial_version_with_parent_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": "0.0.0",
+            }
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Initial version must not have a parent version"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_valid_parent_version_chain_accepted(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": version,
+                "parent_version": parent,
+            }
+            for version, parent in (
+                ("1.0.0", None),
+                ("1.0.1", "1.0.0"),
+                ("1.1.0", "1.0.1"),
+                ("2.0.0", "1.1.0"),
+            )
+        ]
+
+        self.assertEqual(validate_parent_versions(homes), [])
+
+    def test_missing_parent_version_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.1",
+            },
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Missing or invalid parent version" in error
+                for error in errors
+            )
+        )
+
+    def test_nonexistent_parent_version_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.2",
+                "parent_version": "1.0.1",
+            },
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Parent version 1.0.1 does not exist" in error
+                for error in errors
+            )
+        )
+
+    def test_invalid_parent_progression_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "3.0.0",
+                "parent_version": "1.0.0",
+            },
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Invalid version progression from parent"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_parent_from_different_home_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-001",
+                "test_home_version": "1.0.0",
+            },
+            {
+                "test_home_id": "BEEP-HOME-002",
+                "test_home_version": "1.0.1",
+                "parent_version": "1.0.0",
+            },
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Parent version 1.0.0 does not exist"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_self_referencing_parent_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.1",
+                "parent_version": "1.0.1",
+            },
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Invalid version progression from parent"
+                in error
+                for error in errors
+            )
+        )
 
 
 
