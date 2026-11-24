@@ -5,6 +5,7 @@ import unittest
 from validate_technical_review import (
     get_technical_content,
     calculate_technical_fingerprint,
+    validate_review_status,
 )
 
 
@@ -308,6 +309,175 @@ class TestTechnicalFingerprint(unittest.TestCase):
             original,
             self.home,
         )
+
+
+class TestTechnicalReviewStatus(unittest.TestCase):
+
+    def make_home(self, lifecycle, review_status):
+        return {
+            "test_home_id": "BEEP-HOME-TEST",
+            "test_home_version": "1.0.0",
+            "status": lifecycle,
+            "review": {
+                "review_status": review_status,
+            },
+        }
+
+    def test_development_not_started_accepted(self):
+        home = self.make_home(
+            "DEVELOPMENT", "NOT_STARTED"
+        )
+        self.assertEqual(validate_review_status(home), [])
+
+    def test_development_in_progress_rejected(self):
+        home = self.make_home(
+            "DEVELOPMENT", "IN_PROGRESS"
+        )
+        self.assertTrue(validate_review_status(home))
+
+    def test_development_completed_rejected(self):
+        home = self.make_home(
+            "DEVELOPMENT", "COMPLETED"
+        )
+        self.assertTrue(validate_review_status(home))
+
+    def test_under_review_not_started_rejected(self):
+        home = self.make_home(
+            "UNDER_REVIEW", "NOT_STARTED"
+        )
+        self.assertTrue(validate_review_status(home))
+
+    def test_under_review_in_progress_accepted(self):
+        home = self.make_home(
+            "UNDER_REVIEW", "IN_PROGRESS"
+        )
+        self.assertEqual(validate_review_status(home), [])
+
+    def test_under_review_completed_accepted(self):
+        home = self.make_home(
+            "UNDER_REVIEW", "COMPLETED"
+        )
+        self.assertEqual(validate_review_status(home), [])
+
+    def test_approved_not_started_rejected(self):
+        home = self.make_home(
+            "APPROVED", "NOT_STARTED"
+        )
+        self.assertTrue(validate_review_status(home))
+
+    def test_approved_in_progress_rejected(self):
+        home = self.make_home(
+            "APPROVED", "IN_PROGRESS"
+        )
+        self.assertTrue(validate_review_status(home))
+
+    def test_approved_completed_accepted(self):
+        home = self.make_home(
+            "APPROVED", "COMPLETED"
+        )
+        self.assertEqual(validate_review_status(home), [])
+
+    def test_retired_not_started_rejected(self):
+        home = self.make_home(
+            "RETIRED", "NOT_STARTED"
+        )
+        self.assertTrue(validate_review_status(home))
+
+    def test_retired_in_progress_rejected(self):
+        home = self.make_home(
+            "RETIRED", "IN_PROGRESS"
+        )
+        self.assertTrue(validate_review_status(home))
+
+    def test_retired_completed_accepted(self):
+        home = self.make_home(
+            "RETIRED", "COMPLETED"
+        )
+        self.assertEqual(validate_review_status(home), [])
+
+    def test_missing_review_metadata_rejected(self):
+        home = self.make_home(
+            "DEVELOPMENT", "NOT_STARTED"
+        )
+        del home["review"]
+
+        self.assertTrue(validate_review_status(home))
+
+    def test_malformed_review_metadata_rejected(self):
+        for invalid in (None, [], "", 123, True):
+            with self.subTest(value=invalid):
+                home = self.make_home(
+                    "DEVELOPMENT", "NOT_STARTED"
+                )
+                home["review"] = invalid
+
+                self.assertTrue(
+                    validate_review_status(home)
+                )
+
+    def test_missing_review_status_rejected(self):
+        home = self.make_home(
+            "DEVELOPMENT", "NOT_STARTED"
+        )
+        del home["review"]["review_status"]
+
+        self.assertTrue(validate_review_status(home))
+
+    def test_invalid_review_status_rejected(self):
+        for invalid in (
+            None,
+            "",
+            " ",
+            "UNKNOWN",
+            "completed",
+            [],
+            {},
+            123,
+            True,
+        ):
+            with self.subTest(value=invalid):
+                home = self.make_home(
+                    "UNDER_REVIEW", invalid
+                )
+
+                self.assertTrue(
+                    validate_review_status(home)
+                )
+
+    def test_missing_lifecycle_status_rejected(self):
+        home = self.make_home(
+            "DEVELOPMENT", "NOT_STARTED"
+        )
+        del home["status"]
+
+        self.assertTrue(validate_review_status(home))
+
+    def test_invalid_lifecycle_status_rejected(self):
+        for invalid in (
+            None,
+            "",
+            "UNKNOWN",
+            "development",
+            [],
+            {},
+            123,
+            True,
+        ):
+            with self.subTest(value=invalid):
+                home = self.make_home(
+                    invalid, "NOT_STARTED"
+                )
+
+                self.assertTrue(
+                    validate_review_status(home)
+                )
+
+    def test_invalid_reference_home_rejected(self):
+        for invalid in (None, [], "", 123, True):
+            with self.subTest(value=invalid):
+                self.assertTrue(
+                    validate_review_status(invalid)
+                )
 
 
 if __name__ == "__main__":
