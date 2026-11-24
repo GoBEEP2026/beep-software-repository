@@ -126,7 +126,7 @@ jobs:
 
           python test-homes/run_required_unit_tests.py test_validate_technical_review_history.py 32
 
-          python test-homes/run_required_unit_tests.py test_validate_technical_review_record_history_missing.py 36
+          python test-homes/run_required_unit_tests.py test_validate_technical_review_record_history.py 36
 
           python test-homes/run_required_unit_tests.py test_validate_technical_review_records.py 40
 
