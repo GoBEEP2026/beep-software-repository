@@ -27,7 +27,7 @@
       "review": {
         "reviewer": null,
         "review_record": null,
-        "review_status": "NOT_STARTED",
+        "review_status": "COMPLETED",
         "review_date": null,
         "review_findings": null,
         "review_recommendation": null,
