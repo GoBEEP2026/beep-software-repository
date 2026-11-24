@@ -290,6 +290,7 @@ class TestReferenceVersioning(unittest.TestCase):
         )
 
     
+    
     def test_multiple_versions_with_initial_accepted(self):
         self.write_registry({
             "reference_homes": [
@@ -312,6 +313,8 @@ class TestReferenceVersioning(unittest.TestCase):
         )
 
         self.assertEqual(errors, [])
+
+
 
 
 
