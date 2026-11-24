@@ -151,3 +151,6 @@ jobs:
       - name: Run historical technical review unit tests
         run: python -m unittest discover -s test-homes -p "test_validate_technical_review_history.py" -v
 
+      - name: Run registry-wide technical review unit tests
+        run: python -m unittest discover -s test-homes -p "test_validate_technical_review_registry.py" -v
+
