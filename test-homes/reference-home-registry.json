@@ -1,36 +1,6 @@
+
 {
-  "registry_version": "1.1.0",
-  "registry_status": "DEVELOPMENT",
-  "reference_homes": []
-   
-     
-"reference_files": [
-  {
-    "filename": "sample-home.xml",
-    "sha256": "a343045abc6b7f903b14fc8dc59b985b80d8cc67e22a52f29d45f999b1fb910b"
-  }
-],
-
-      "approved_compliance_paths": [
-        "ERI",
-        "R405"
-      ],
-      "test_cycles": [],
-      
-"approval": {
-  "approved_by": null,
-  "approval_date": null,
-  "approval_record": null,
-  "board_resolution_reference": null
-},
-
-      "version_history": [
-        {
-          "version": "1.0.0",
-          "change_type": "INITIAL",
-          "description": "Initial development reference-home definition."
-        }
-      ]
-    }
-  ]
+    "registry_version": "1.1.0",
+    "registry_status": "DEVELOPMENT",
+    "reference_homes": []
 }
