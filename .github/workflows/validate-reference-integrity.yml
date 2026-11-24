@@ -133,6 +133,8 @@ jobs:
           python test-homes/run_required_unit_tests.py test_validate_reference_versioning.py 65
 
           python test-homes/run_required_unit_tests.py test_validate_review_approval_chronology.py 30
+          
+          python test-homes/run_required_unit_tests.py test_validate_review_identifier_history.py 36
 
           python test-homes/run_required_unit_tests.py test_validate_review_identifiers.py 40
 
@@ -148,6 +150,6 @@ jobs:
 
           echo "========================================"
           echo "ALL REQUIRED REPOSITORY UNIT TESTS PASSED"
-          echo "Verified test suites: 16/16"
-          echo "Verified unit tests: 448/448"
+          echo "Verified test suites: 17/17"
+          echo "Verified unit tests: 484/484"
           echo "========================================"
