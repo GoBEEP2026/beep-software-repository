@@ -115,6 +115,10 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           python test-homes/validate_review_identifier_history.py "$BASE_SHA"
+          
+      - name: Validate cross-registry technical review assignment consistency
+        run: |
+          python test-homes/validate_review_assignment_consistency.py test-homes/reference-home-registry.json test-homes/reference-review-identifier-registry.json
 
       - name: Enforce all required repository unit test counts
         run: |
