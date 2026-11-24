@@ -17,6 +17,40 @@ def is_valid_version(version):
         and VERSION_PATTERN.fullmatch(version) is not None
     )
 
+def parse_version(version):
+    """Convert a valid semantic version into integers."""
+
+    if not is_valid_version(version):
+        raise ValueError(f"Invalid semantic version: {version!r}")
+
+    return tuple(int(part) for part in version.split("."))
+
+
+def get_version_change_type(parent_version, new_version):
+    """Identify a valid major, minor, or patch increment."""
+
+    if not is_valid_version(parent_version):
+        return None
+
+    if not is_valid_version(new_version):
+        return None
+
+    major, minor, patch = parse_version(parent_version)
+    proposed = parse_version(new_version)
+
+    if proposed == (major + 1, 0, 0):
+        return "MAJOR"
+
+    if proposed == (major, minor + 1, 0):
+        return "MINOR"
+
+    if proposed == (major, minor, patch + 1):
+        return "PATCH"
+
+    return None
+
+
+
 
 def validate_reference_versioning(registry_path):
     """Validate reference-home version identifiers."""
