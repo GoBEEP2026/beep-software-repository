@@ -584,6 +584,60 @@ class TestReferenceVersioning(unittest.TestCase):
 
 
 
+    def test_registry_rejects_missing_parent(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                },
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.1",
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Missing or invalid parent version" in error
+                for error in errors
+            )
+        )
+
+    def test_registry_rejects_skipped_version(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                },
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "3.0.0",
+                    "parent_version": "1.0.0",
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Invalid version progression from parent"
+                in error
+                for error in errors
+            )
+        )
+
+
+
 
 
 if __name__ == "__main__":
