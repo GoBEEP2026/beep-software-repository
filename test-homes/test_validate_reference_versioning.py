@@ -773,6 +773,91 @@ class TestReferenceVersioning(unittest.TestCase):
 
 
 
+    def test_registry_rejects_duplicate_versions(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                    "parent_version": None,
+                },
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                    "parent_version": None,
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Duplicate reference home version" in error
+                for error in errors
+            )
+        )
+
+    def test_registry_rejects_branching_history(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": version,
+                    "parent_version": parent,
+                }
+                for version, parent in (
+                    ("1.0.0", None),
+                    ("1.0.1", "1.0.0"),
+                    ("1.1.0", "1.0.0"),
+                )
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Parent must be the immediate predecessor"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_registry_rejects_nonsequential_history(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": version,
+                    "parent_version": parent,
+                }
+                for version, parent in (
+                    ("1.0.0", None),
+                    ("1.0.1", "1.0.0"),
+                    ("1.0.3", "1.0.1"),
+                )
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Invalid sequential version increment"
+                in error
+                for error in errors
+            )
+        )
+
+
+
 
 
 if __name__ == "__main__":
