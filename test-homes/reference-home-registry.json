@@ -1,3 +1,4 @@
+
 {
   "registry_version": "1.1.0",
   "registry_status": "DEVELOPMENT",
@@ -5,6 +6,7 @@
     {
       "test_home_id": "BEEP-HOME-001",
       "test_home_version": "1.0.0",
+      "parent_version": null,
       "name": "B.E.E.P. Sample Reference Home",
       "description": "Development reference home for testing vendor submission and comparison workflows.",
       "status": "DEVELOPMENT",
@@ -12,32 +14,37 @@
       "conditioned_floor_area_ft2": 2200,
       "conditioned_volume_ft3": 19800,
       "bedrooms": 3,
-     
-"reference_files": [
-  {
-    "filename": "sample-home.xml",
-    "sha256": "a343045abc6b7f903b14fc8dc59b985b80d8cc67e22a52f29d45f999b1fb910b"
-  }
-],
-
+      "reference_files": [
+        {
+          "filename": "sample-home.xml",
+          "sha256": "a343045abc6b7f903b14fc8dc59b985b80d8cc67e22a52f29d45f999b1fb910b"
+        }
+      ],
       "approved_compliance_paths": [
         "ERI",
         "R405"
       ],
       "test_cycles": [],
-      
-"approval": {
-  "approved_by": null,
-  "approval_date": null,
-  "approval_record": null,
-  "board_resolution_reference": null
-},
-
+      "approval": {
+        "approved_by": null,
+        "approval_date": null,
+        "approval_record": null,
+        "board_resolution_reference": null
+      },
       "version_history": [
         {
           "version": "1.0.0",
           "change_type": "INITIAL",
-          "description": "Initial development reference-home definition."
+          "description": "Initial development reference-home definition.",
+          "change_reason": "Establish a development reference home for testing vendor submission and comparison workflows.",
+          "anticipated_impact": "Establishes the initial development baseline. Modeling impacts and software consistency have not yet been verified.",
+          "affected_components": [
+            "Building geometry",
+            "Documentation",
+            "Metadata",
+            "Compliance pathways"
+          ],
+          "change_date": null
         }
       ]
     }
