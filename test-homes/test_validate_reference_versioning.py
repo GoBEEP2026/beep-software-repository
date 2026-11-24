@@ -3,10 +3,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+
 from validate_reference_versioning import (
     is_valid_version,
+    parse_version,
+    get_version_change_type,
     validate_reference_versioning,
 )
+
 
 
 class TestReferenceVersioning(unittest.TestCase):
@@ -165,6 +169,63 @@ class TestReferenceVersioning(unittest.TestCase):
                 for error in errors
             )
         )
+
+    def test_parse_semantic_version(self):
+        self.assertEqual(
+            parse_version("1.2.3"),
+            (1, 2, 3),
+        )
+
+    def test_parse_invalid_version_rejected(self):
+        with self.assertRaises(ValueError):
+            parse_version("1.0")
+
+    def test_major_version_progression(self):
+        self.assertEqual(
+            get_version_change_type("1.2.3", "2.0.0"),
+            "MAJOR",
+        )
+
+    def test_minor_version_progression(self):
+        self.assertEqual(
+            get_version_change_type("1.2.3", "1.3.0"),
+            "MINOR",
+        )
+
+    def test_patch_version_progression(self):
+        self.assertEqual(
+            get_version_change_type("1.2.3", "1.2.4"),
+            "PATCH",
+        )
+
+    def test_invalid_version_progression_rejected(self):
+        invalid_transitions = [
+            ("1.0.0", "3.0.0"),
+            ("1.0.0", "1.2.0"),
+            ("1.0.0", "1.0.5"),
+            ("1.0.0", "1.0.0"),
+            ("2.0.0", "1.0.0"),
+            ("1.2.3", "2.2.3"),
+            ("1.2.3", "1.3.3"),
+            ("1.0", "2.0.0"),
+            ("1.0.0", "2.0"),
+            (None, "1.0.0"),
+            ("1.0.0", None),
+        ]
+
+        for parent, proposed in invalid_transitions:
+            with self.subTest(
+                parent=parent,
+                proposed=proposed,
+            ):
+                self.assertIsNone(
+                    get_version_change_type(
+                        parent,
+                        proposed,
+                    )
+                )
+
+
 
 
 if __name__ == "__main__":
