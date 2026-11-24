@@ -175,12 +175,16 @@ def validate_reference_versioning(registry_path):
 
         home_versions.setdefault(home_id, set()).add(version)
 
+    
     for home_id, versions in home_versions.items():
         if "1.0.0" not in versions:
             errors.append(
                 f"{home_id}: Initial reference home version "
                 "must be 1.0.0"
             )
+
+    # Validate parent-version relationships.
+    errors.extend(validate_parent_versions(homes))
 
 
     return errors
