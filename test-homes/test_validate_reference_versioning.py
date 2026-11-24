@@ -226,6 +226,139 @@ class TestReferenceVersioning(unittest.TestCase):
                 )
 
 
+    def test_initial_version_accepted(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                }
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_missing_initial_version_rejected(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "2.0.0",
+                }
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Initial reference home version must be 1.0.0"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_zero_initial_version_rejected(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "0.0.0",
+                }
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Initial reference home version must be 1.0.0"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_multiple_versions_with_initial_accepted(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": version,
+                }
+                for version in (
+                    "1.0.0",
+                    "1.0.1",
+                    "1.1.0",
+                    "2.0.0",
+                )
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_initial_version_required_for_each_home(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-001",
+                    "test_home_version": "1.0.0",
+                },
+                {
+                    "test_home_id": "BEEP-HOME-002",
+                    "test_home_version": "1.1.0",
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "BEEP-HOME-002: Initial reference home "
+                "version must be 1.0.0" in error
+                for error in errors
+            )
+        )
+
+    def test_invalid_reference_home_id_rejected(self):
+        for home_id in (None, "", " ", 123, [], {}):
+            with self.subTest(home_id=home_id):
+                self.write_registry({
+                    "reference_homes": [
+                        {
+                            "test_home_id": home_id,
+                            "test_home_version": "1.0.0",
+                        }
+                    ]
+                })
+
+                errors = validate_reference_versioning(
+                    self.registry_path
+                )
+
+                self.assertTrue(
+                    any(
+                        "missing or invalid ID" in error
+                        for error in errors
+                    )
+                )
+
+
+
 
 
 if __name__ == "__main__":
