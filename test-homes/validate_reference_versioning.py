@@ -116,6 +116,83 @@ def validate_parent_versions(homes):
 
 
 
+def validate_linear_version_history(homes):
+    """Require a single sequential history for each home."""
+
+    errors = []
+    grouped_homes = {}
+
+    for home in homes:
+        if not isinstance(home, dict):
+            continue
+
+        home_id = home.get("test_home_id")
+        version = home.get("test_home_version")
+
+        if not isinstance(home_id, str) or not home_id.strip():
+            continue
+
+        if not is_valid_version(version):
+            continue
+
+        grouped_homes.setdefault(home_id, []).append(home)
+
+    for home_id, records in grouped_homes.items():
+        seen_versions = set()
+
+        for record in records:
+            version = record["test_home_version"]
+
+            if version in seen_versions:
+                errors.append(
+                    f"{home_id}/{version}: Duplicate "
+                    "reference home version"
+                )
+
+            seen_versions.add(version)
+
+        try:
+            ordered_records = sorted(
+                records,
+                key=lambda record: parse_version(
+                    record["test_home_version"]
+                ),
+            )
+        except ValueError:
+            errors.append(
+                f"{home_id}: Unable to order semantic versions"
+            )
+            continue
+
+        for index in range(1, len(ordered_records)):
+            previous = ordered_records[index - 1]
+            current = ordered_records[index]
+
+            previous_version = previous["test_home_version"]
+            current_version = current["test_home_version"]
+            parent = current.get("parent_version")
+
+            if parent != previous_version:
+                errors.append(
+                    f"{home_id}/{current_version}: "
+                    "Parent must be the immediate predecessor "
+                    f"{previous_version}"
+                )
+
+            if get_version_change_type(
+                previous_version,
+                current_version,
+            ) is None:
+                errors.append(
+                    f"{home_id}/{current_version}: "
+                    "Invalid sequential version increment "
+                    f"from {previous_version}"
+                )
+
+    return errors
+
+
+
 
 
 def validate_reference_versioning(registry_path):
