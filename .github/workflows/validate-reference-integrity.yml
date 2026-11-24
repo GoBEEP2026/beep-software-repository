@@ -170,4 +170,8 @@ jobs:
       - name: Run technical review supporting document unit tests
         run: python -m unittest discover -s test-homes -p "test_validate_technical_review_records.py" -v
 
+      - name: Validate technical review supporting documents
+        run: python test-homes/validate_technical_review_records.py test-homes/reference-home-registry.json
+
+
 
