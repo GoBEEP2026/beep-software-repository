@@ -144,3 +144,8 @@ jobs:
         if: always()
         run: |
           python test-homes/validate_reference_versioning.py --documentation test-homes/reference-home-registry.json
+
+
+      - name: Run technical fingerprint unit tests
+        run: |
+          python -m unittest discover -s test-homes -p "test_validate_technical_review.py" -v
