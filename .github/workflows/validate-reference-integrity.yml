@@ -154,3 +154,10 @@ jobs:
       - name: Run registry-wide technical review unit tests
         run: python -m unittest discover -s test-homes -p "test_validate_technical_review_registry.py" -v
 
+      - name: Validate current technical review registry
+        run: python test-homes/validate_technical_review_registry.py test-homes/reference-home-registry.json
+
+      - name: Validate historical technical review registry
+        if: github.event_name == 'pull_request'
+        run: python test-homes/validate_technical_review_registry.py --historical /tmp/beep-previous-reference-registry.json test-homes/reference-home-registry.json
+
