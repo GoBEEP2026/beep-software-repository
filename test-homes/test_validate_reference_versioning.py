@@ -6,14 +6,17 @@ from pathlib import Path
 
 
 
+
 from validate_reference_versioning import (
     is_valid_version,
     parse_version,
     get_version_change_type,
     validate_parent_versions,
     validate_linear_version_history,
+    validate_historical_versions,
     validate_reference_versioning,
 )
+
 
 
 
@@ -855,6 +858,210 @@ class TestReferenceVersioning(unittest.TestCase):
                 for error in errors
             )
         )
+
+
+
+    def test_unchanged_historical_versions_accepted(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            }
+        ]
+
+        self.assertEqual(
+            validate_historical_versions(homes, homes),
+            [],
+        )
+
+    def test_new_historical_version_accepted(self):
+        previous = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            }
+        ]
+
+        current = previous + [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.1",
+                "parent_version": "1.0.0",
+            }
+        ]
+
+        self.assertEqual(
+            validate_historical_versions(previous, current),
+            [],
+        )
+
+    def test_historical_version_deletion_rejected(self):
+        for status in (
+            "DEVELOPMENT",
+            "UNDER_REVIEW",
+            "APPROVED",
+            "RETIRED",
+        ):
+            with self.subTest(status=status):
+                previous = [
+                    {
+                        "test_home_id": "BEEP-HOME-TEST",
+                        "test_home_version": "1.0.0",
+                        "parent_version": None,
+                        "status": status,
+                    }
+                ]
+
+                errors = validate_historical_versions(
+                    previous,
+                    [],
+                )
+
+                self.assertTrue(
+                    any(
+                        "cannot be deleted or renumbered"
+                        in error
+                        for error in errors
+                    )
+                )
+
+    def test_historical_version_renumbering_rejected(self):
+        previous = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            }
+        ]
+
+        current = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "2.0.0",
+            }
+        ]
+
+        errors = validate_historical_versions(
+            previous,
+            current,
+        )
+
+        self.assertTrue(
+            any(
+                "cannot be deleted or renumbered" in error
+                for error in errors
+            )
+        )
+
+    def test_historical_parent_change_rejected(self):
+        previous = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.1",
+                "parent_version": "1.0.0",
+            },
+        ]
+
+        current = [
+            dict(home) for home in previous
+        ]
+
+        current[1]["parent_version"] = "0.0.0"
+
+        errors = validate_historical_versions(
+            previous,
+            current,
+        )
+
+        self.assertTrue(
+            any(
+                "Historical parent version cannot be changed"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_historical_duplicate_version_rejected(self):
+        previous = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            }
+        ]
+
+        current = previous + [
+            dict(previous[0])
+        ]
+
+        errors = validate_historical_versions(
+            previous,
+            current,
+        )
+
+        self.assertTrue(
+            any(
+                "Duplicate version" in error
+                for error in errors
+            )
+        )
+
+    def test_historical_home_reassignment_rejected(self):
+        previous = [
+            {
+                "test_home_id": "BEEP-HOME-001",
+                "test_home_version": "1.0.0",
+            }
+        ]
+
+        current = [
+            {
+                "test_home_id": "BEEP-HOME-002",
+                "test_home_version": "1.0.0",
+            }
+        ]
+
+        errors = validate_historical_versions(
+            previous,
+            current,
+        )
+
+        self.assertTrue(
+            any(
+                "cannot be deleted or renumbered" in error
+                for error in errors
+            )
+        )
+
+    def test_malformed_historical_registry_rejected(self):
+        malformed_inputs = [
+            None,
+            {},
+            "invalid",
+            [None],
+            [{"test_home_id": "BEEP-HOME-TEST"}],
+        ]
+
+        for malformed in malformed_inputs:
+            with self.subTest(malformed=malformed):
+                self.assertTrue(
+                    validate_historical_versions(
+                        malformed,
+                        [],
+                    )
+                )
+
+                self.assertTrue(
+                    validate_historical_versions(
+                        [],
+                        malformed,
+                    )
+                )
 
 
 
