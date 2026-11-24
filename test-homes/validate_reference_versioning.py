@@ -1,7 +1,9 @@
 import json
 import re
 import sys
+from datetime import date
 from pathlib import Path
+
 
 
 VERSION_PATTERN = re.compile(
@@ -270,6 +272,145 @@ def validate_historical_versions(previous_homes, current_homes):
                 f"{home_id}/{version}: Historical parent "
                 "version cannot be changed"
             )
+
+    return errors
+
+
+
+def validate_change_documentation(homes):
+    """Validate required reference-home change documentation."""
+
+    errors = []
+
+    if not isinstance(homes, list):
+        return ["Invalid reference homes array"]
+
+    required_text_fields = (
+        "description",
+        "change_reason",
+        "anticipated_impact",
+    )
+
+    for home in homes:
+        if not isinstance(home, dict):
+            errors.append("Malformed reference home")
+            continue
+
+        home_id = home.get("test_home_id")
+        version = home.get("test_home_version")
+        parent = home.get("parent_version")
+
+        if (
+            not isinstance(home_id, str)
+            or not home_id.strip()
+            or not is_valid_version(version)
+        ):
+            errors.append("Invalid reference home identity")
+            continue
+
+        label = f"{home_id}/{version}"
+
+        history = home.get("version_history")
+
+        if not isinstance(history, list) or not history:
+            errors.append(
+                f"{label}: Missing or invalid version history"
+            )
+            continue
+
+        if any(
+            not isinstance(entry, dict)
+            for entry in history
+        ):
+            errors.append(
+                f"{label}: Malformed version history entry"
+            )
+            continue
+
+        matching_entries = [
+            entry for entry in history
+            if entry.get("version") == version
+        ]
+
+        if len(matching_entries) != 1:
+            errors.append(
+                f"{label}: Exactly one matching version "
+                "history entry is required"
+            )
+            continue
+
+        entry = matching_entries[0]
+
+        if version == "1.0.0":
+            expected_change_type = "INITIAL"
+        else:
+            expected_change_type = get_version_change_type(
+                parent,
+                version,
+            )
+
+        if (
+            expected_change_type is None
+            or entry.get("change_type") != expected_change_type
+        ):
+            errors.append(
+                f"{label}: Change classification does not "
+                "match semantic version progression"
+            )
+
+        for field in required_text_fields:
+            value = entry.get(field)
+
+            if not isinstance(value, str) or not value.strip():
+                errors.append(
+                    f"{label}: Missing or invalid {field}"
+                )
+
+        components = entry.get("affected_components")
+
+        if (
+            not isinstance(components, list)
+            or not components
+            or any(
+                not isinstance(component, str)
+                or not component.strip()
+                for component in components
+            )
+        ):
+            errors.append(
+                f"{label}: Missing or invalid affected_components"
+            )
+
+        change_date = entry.get("change_date")
+
+        legacy_initial_record = (
+            home_id == "BEEP-HOME-001"
+            and version == "1.0.0"
+            and entry.get("change_type") == "INITIAL"
+            and "change_date" in entry
+            and change_date is None
+        )
+
+        if not legacy_initial_record:
+            if (
+                not isinstance(change_date, str)
+                or re.fullmatch(
+                    r"[0-9]{4}-[0-9]{2}-[0-9]{2}",
+                    change_date,
+                ) is None
+            ):
+                errors.append(
+                    f"{label}: Invalid change_date. "
+                    "Expected YYYY-MM-DD format"
+                )
+            else:
+                try:
+                    date.fromisoformat(change_date)
+                except ValueError:
+                    errors.append(
+                        f"{label}: Invalid change_date "
+                        "calendar date"
+                    )
 
     return errors
 
