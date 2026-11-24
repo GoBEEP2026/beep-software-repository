@@ -352,6 +352,63 @@ def validate_reference_versioning(registry_path):
     return errors
 
 
+def validate_historical_registries(
+    previous_registry_path,
+    current_registry_path,
+):
+    """Compare previous and proposed reference registries."""
+
+    errors = []
+    registries = []
+
+    for registry_name, registry_path in (
+        ("Previous registry", previous_registry_path),
+        ("Current registry", current_registry_path),
+    ):
+        try:
+            registry = json.loads(
+                Path(registry_path).read_text(
+                    encoding="utf-8"
+                )
+            )
+        except (OSError, UnicodeError, ValueError) as exc:
+            errors.append(
+                f"{registry_name}: Unable to read registry: {exc}"
+            )
+            continue
+
+        if not isinstance(registry, dict):
+            errors.append(
+                f"{registry_name}: Registry must be a JSON object"
+            )
+            continue
+
+        homes = registry.get("reference_homes")
+
+        if not isinstance(homes, list):
+            errors.append(
+                f"{registry_name}: Missing or invalid "
+                "reference_homes array"
+            )
+            continue
+
+        registries.append(homes)
+
+    if errors:
+        return errors
+
+    errors.extend(
+        validate_historical_versions(
+            registries[0],
+            registries[1],
+        )
+    )
+
+    return errors
+
+
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print(
