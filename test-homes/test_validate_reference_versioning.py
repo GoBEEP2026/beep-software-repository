@@ -6,8 +6,6 @@ from pathlib import Path
 
 
 
-
-
 from validate_reference_versioning import (
     is_valid_version,
     parse_version,
@@ -15,11 +13,10 @@ from validate_reference_versioning import (
     validate_parent_versions,
     validate_linear_version_history,
     validate_historical_versions,
+    validate_change_documentation,
     validate_reference_versioning,
     validate_historical_registries,
 )
-
-
 
 
 
@@ -1273,6 +1270,254 @@ class TestReferenceVersioning(unittest.TestCase):
                             for error in errors
                         )
                     )
+
+
+
+    def make_documented_home(
+        self,
+        version="1.0.0",
+        parent=None,
+        change_type="INITIAL",
+    ):
+        return {
+            "test_home_id": "BEEP-HOME-TEST",
+            "test_home_version": version,
+            "parent_version": parent,
+            "version_history": [
+                {
+                    "version": version,
+                    "change_type": change_type,
+                    "description": "Test change description.",
+                    "change_reason": "Test change reason.",
+                    "anticipated_impact": "Test modeling impact.",
+                    "affected_components": [
+                        "Building geometry"
+                    ],
+                    "change_date": "2026-11-24",
+                }
+            ],
+        }
+
+    def test_valid_initial_change_documentation(self):
+        home = self.make_documented_home()
+
+        self.assertEqual(
+            validate_change_documentation([home]),
+            [],
+        )
+
+    def test_valid_version_change_classifications(self):
+        for parent, version, change_type in (
+            ("1.0.0", "1.0.1", "PATCH"),
+            ("1.0.1", "1.1.0", "MINOR"),
+            ("1.1.0", "2.0.0", "MAJOR"),
+        ):
+            with self.subTest(change_type=change_type):
+                home = self.make_documented_home(
+                    version,
+                    parent,
+                    change_type,
+                )
+
+                self.assertEqual(
+                    validate_change_documentation([home]),
+                    [],
+                )
+
+    def test_incorrect_change_classification_rejected(self):
+        home = self.make_documented_home(
+            "2.0.0",
+            "1.0.0",
+            "PATCH",
+        )
+
+        errors = validate_change_documentation([home])
+
+        self.assertTrue(
+            any(
+                "Change classification does not match"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_missing_version_history_rejected(self):
+        home = self.make_documented_home()
+        del home["version_history"]
+
+        errors = validate_change_documentation([home])
+
+        self.assertTrue(
+            any(
+                "Missing or invalid version history"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_malformed_version_history_rejected(self):
+        for history in (None, {}, [], [None]):
+            with self.subTest(history=history):
+                home = self.make_documented_home()
+                home["version_history"] = history
+
+                self.assertTrue(
+                    validate_change_documentation([home])
+                )
+
+    def test_missing_matching_history_entry_rejected(self):
+        home = self.make_documented_home()
+        home["version_history"][0]["version"] = "2.0.0"
+
+        errors = validate_change_documentation([home])
+
+        self.assertTrue(
+            any(
+                "Exactly one matching version"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_duplicate_matching_history_entry_rejected(self):
+        home = self.make_documented_home()
+
+        home["version_history"].append(
+            dict(home["version_history"][0])
+        )
+
+        errors = validate_change_documentation([home])
+
+        self.assertTrue(
+            any(
+                "Exactly one matching version"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_required_change_text_fields(self):
+        for field in (
+            "description",
+            "change_reason",
+            "anticipated_impact",
+        ):
+            for value in (None, "", "   ", 123):
+                with self.subTest(
+                    field=field,
+                    value=value,
+                ):
+                    home = self.make_documented_home()
+                    home["version_history"][0][field] = value
+
+                    errors = validate_change_documentation(
+                        [home]
+                    )
+
+                    self.assertTrue(
+                        any(
+                            f"Missing or invalid {field}"
+                            in error
+                            for error in errors
+                        )
+                    )
+
+    def test_invalid_affected_components_rejected(self):
+        for components in (
+            None,
+            [],
+            "Building geometry",
+            [""],
+            ["   "],
+            [123],
+        ):
+            with self.subTest(components=components):
+                home = self.make_documented_home()
+
+                home["version_history"][0][
+                    "affected_components"
+                ] = components
+
+                errors = validate_change_documentation(
+                    [home]
+                )
+
+                self.assertTrue(
+                    any(
+                        "Missing or invalid affected_components"
+                        in error
+                        for error in errors
+                    )
+                )
+
+    def test_invalid_change_dates_rejected(self):
+        for change_date in (
+            None,
+            "",
+            "11/24/2026",
+            "2026-2-01",
+            "2026-13-01",
+            "2026-02-30",
+            "2025-02-29",
+        ):
+            with self.subTest(change_date=change_date):
+                home = self.make_documented_home()
+
+                home["version_history"][0][
+                    "change_date"
+                ] = change_date
+
+                errors = validate_change_documentation(
+                    [home]
+                )
+
+                self.assertTrue(
+                    any(
+                        "Invalid change_date" in error
+                        for error in errors
+                    )
+                )
+
+    def test_valid_leap_year_change_date(self):
+        home = self.make_documented_home()
+
+        home["version_history"][0][
+            "change_date"
+        ] = "2024-02-29"
+
+        self.assertEqual(
+            validate_change_documentation([home]),
+            [],
+        )
+
+    def test_legacy_initial_date_exception(self):
+        home = self.make_documented_home()
+        home["test_home_id"] = "BEEP-HOME-001"
+        home["version_history"][0]["change_date"] = None
+
+        self.assertEqual(
+            validate_change_documentation([home]),
+            [],
+        )
+
+        del home["version_history"][0]["change_date"]
+
+        self.assertTrue(
+            validate_change_documentation([home])
+        )
+
+        home = self.make_documented_home(
+            "1.0.1",
+            "1.0.0",
+            "PATCH",
+        )
+
+        home["test_home_id"] = "BEEP-HOME-001"
+        home["version_history"][0]["change_date"] = None
+
+        self.assertTrue(
+            validate_change_documentation([home])
+        )
 
 
 
