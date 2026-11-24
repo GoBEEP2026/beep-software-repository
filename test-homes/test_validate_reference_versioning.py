@@ -289,18 +289,20 @@ class TestReferenceVersioning(unittest.TestCase):
             )
         )
 
+    
     def test_multiple_versions_with_initial_accepted(self):
         self.write_registry({
             "reference_homes": [
                 {
                     "test_home_id": "BEEP-HOME-TEST",
                     "test_home_version": version,
+                    "parent_version": parent,
                 }
-                for version in (
-                    "1.0.0",
-                    "1.0.1",
-                    "1.1.0",
-                    "2.0.0",
+                for version, parent in (
+                    ("1.0.0", None),
+                    ("1.0.1", "1.0.0"),
+                    ("1.1.0", "1.0.1"),
+                    ("2.0.0", "1.1.0"),
                 )
             ]
         })
@@ -310,6 +312,8 @@ class TestReferenceVersioning(unittest.TestCase):
         )
 
         self.assertEqual(errors, [])
+
+
 
     def test_initial_version_required_for_each_home(self):
         self.write_registry({
@@ -512,6 +516,60 @@ class TestReferenceVersioning(unittest.TestCase):
         ]
 
         errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Invalid version progression from parent"
+                in error
+                for error in errors
+            )
+        )
+
+
+
+    def test_registry_rejects_missing_parent(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                },
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.1",
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Missing or invalid parent version" in error
+                for error in errors
+            )
+        )
+
+    def test_registry_rejects_skipped_version(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                },
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "3.0.0",
+                    "parent_version": "1.0.0",
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
 
         self.assertTrue(
             any(
