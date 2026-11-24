@@ -409,23 +409,52 @@ def validate_historical_registries(
 
 
 
+
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) == 2:
+        validation_errors = validate_reference_versioning(
+            sys.argv[1]
+        )
+
+        validation_name = "REFERENCE HOME VERSION"
+
+    elif len(sys.argv) == 4 and sys.argv[1] == "--historical":
+        previous_registry = sys.argv[2]
+        current_registry = sys.argv[3]
+
+        validation_errors = validate_reference_versioning(
+            current_registry
+        )
+
+        validation_errors.extend(
+            validate_historical_registries(
+                previous_registry,
+                current_registry,
+            )
+        )
+
+        validation_name = "HISTORICAL REFERENCE HOME VERSION"
+
+    else:
+        print("Usage:")
         print(
-            "Usage: python validate_reference_versioning.py "
+            "  python validate_reference_versioning.py "
             "<reference-registry>"
+        )
+        print(
+            "  python validate_reference_versioning.py "
+            "--historical <previous-registry> "
+            "<current-registry>"
         )
         sys.exit(2)
 
-    validation_errors = validate_reference_versioning(sys.argv[1])
-
     if validation_errors:
-        print("REFERENCE HOME VERSION VALIDATION FAILED")
+        print(f"{validation_name} VALIDATION FAILED")
 
         for error in validation_errors:
             print(f"ERROR: {error}")
 
         sys.exit(1)
 
-    print("REFERENCE HOME VERSION VALIDATION PASSED")
+    print(f"{validation_name} VALIDATION PASSED")
     sys.exit(0)
