@@ -23,7 +23,17 @@
         "ERI",
         "R405"
       ],
-      "test_cycles": [],
+            "test_cycles": [],
+      "review": {
+        "reviewer": null,
+        "review_record": null,
+        "review_status": "NOT_STARTED",
+        "review_date": null,
+        "review_findings": null,
+        "review_recommendation": null,
+        "conflict_of_interest_disclosure": null,
+        "reviewed_content_sha256": null
+      },
       "approval": {
         "approved_by": null,
         "approval_date": null,
