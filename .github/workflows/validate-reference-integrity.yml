@@ -179,5 +179,62 @@ jobs:
       - name: Validate required unit test runner
         run: python test-homes/run_required_unit_tests.py test_run_required_unit_tests.py 20
 
+      - name: Inventory all repository unit test suites
+        run: |
+          python - <<'PY'
+          import sys
+          import unittest
+          from pathlib import Path
+
+          directory = Path("test-homes").resolve()
+          sys.path.insert(0, str(directory))
+
+          files = sorted(directory.glob("test_*.py"))
+
+          if not files:
+              sys.exit("ERROR: No unit test files found")
+
+          total = 0
+          errors = []
+
+          print("REPOSITORY UNIT TEST INVENTORY")
+          print("=" * 80)
+
+          for path in files:
+              loader = unittest.TestLoader()
+
+              suite = loader.discover(
+                  start_dir=str(directory),
+                  pattern=path.name,
+              )
+
+              count = suite.countTestCases()
+
+              print(f"{path.name}: {count} tests")
+
+              if loader.errors:
+                  errors.extend(loader.errors)
+
+              if count == 0:
+                  errors.append(
+                      f"No tests discovered in {path.name}"
+                  )
+
+              total += count
+
+          print("=" * 80)
+          print(f"Total test suites: {len(files)}")
+          print(f"Total discovered tests: {total}")
+
+          if errors:
+              for error in errors:
+                  print(f"ERROR: {error}")
+
+              sys.exit(1)
+
+          print("UNIT TEST INVENTORY PASSED")
+          PY
+
+
 
 
