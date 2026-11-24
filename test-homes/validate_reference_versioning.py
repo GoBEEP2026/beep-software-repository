@@ -50,6 +50,72 @@ def get_version_change_type(parent_version, new_version):
     return None
 
 
+def validate_parent_versions(homes):
+    """Validate reference-home parent-version relationships."""
+
+    errors = []
+    registered_versions = set()
+
+    for home in homes:
+        if not isinstance(home, dict):
+            continue
+
+        home_id = home.get("test_home_id")
+        version = home.get("test_home_version")
+
+        if (
+            isinstance(home_id, str)
+            and home_id.strip()
+            and is_valid_version(version)
+        ):
+            registered_versions.add((home_id, version))
+
+    for home in homes:
+        if not isinstance(home, dict):
+            continue
+
+        home_id = home.get("test_home_id")
+        version = home.get("test_home_version")
+        parent = home.get("parent_version")
+
+        if not isinstance(home_id, str) or not home_id.strip():
+            continue
+
+        if not is_valid_version(version):
+            continue
+
+        if version == "1.0.0":
+            if parent is not None:
+                errors.append(
+                    f"{home_id}/{version}: Initial version "
+                    "must not have a parent version"
+                )
+            continue
+
+        if not is_valid_version(parent):
+            errors.append(
+                f"{home_id}/{version}: Missing or invalid "
+                "parent version"
+            )
+            continue
+
+        if (home_id, parent) not in registered_versions:
+            errors.append(
+                f"{home_id}/{version}: Parent version "
+                f"{parent} does not exist for this home"
+            )
+            continue
+
+        if get_version_change_type(parent, version) is None:
+            errors.append(
+                f"{home_id}/{version}: Invalid version "
+                f"progression from parent {parent}"
+            )
+
+    return errors
+
+
+
 
 
 def validate_reference_versioning(registry_path):
