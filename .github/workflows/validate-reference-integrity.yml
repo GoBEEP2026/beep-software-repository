@@ -179,61 +179,45 @@ jobs:
       - name: Validate required unit test runner
         run: python test-homes/run_required_unit_tests.py test_run_required_unit_tests.py 20
 
-      - name: Inventory all repository unit test suites
+      - name: Enforce all required repository unit test counts
         run: |
-          python - <<'PY'
-          import sys
-          import unittest
-          from pathlib import Path
+          set -e
 
-          directory = Path("test-homes").resolve()
-          sys.path.insert(0, str(directory))
+          python test-homes/run_required_unit_tests.py test_run_required_unit_tests.py 20
 
-          files = sorted(directory.glob("test_*.py"))
+          python test-homes/run_required_unit_tests.py test_validate_approval_records.py 7
 
-          if not files:
-              sys.exit("ERROR: No unit test files found")
+          python test-homes/run_required_unit_tests.py test_validate_audit_append_only.py 5
 
-          total = 0
-          errors = []
+          python test-homes/run_required_unit_tests.py test_validate_board_authorization.py 8
 
-          print("REPOSITORY UNIT TEST INVENTORY")
-          print("=" * 80)
+          python test-homes/run_required_unit_tests.py test_validate_reference_approval.py 13
 
-          for path in files:
-              loader = unittest.TestLoader()
+          python test-homes/run_required_unit_tests.py test_validate_reference_audit.py 8
 
-              suite = loader.discover(
-                  start_dir=str(directory),
-                  pattern=path.name,
-              )
+          python test-homes/run_required_unit_tests.py test_validate_reference_integrity.py 5
 
-              count = suite.countTestCases()
+          python test-homes/run_required_unit_tests.py test_validate_reference_lifecycle.py 20
 
-              print(f"{path.name}: {count} tests")
+          python test-homes/run_required_unit_tests.py test_validate_reference_versioning.py 65
 
-              if loader.errors:
-                  errors.extend(loader.errors)
+          python test-homes/run_required_unit_tests.py test_validate_review_approval_chronology.py 30
 
-              if count == 0:
-                  errors.append(
-                      f"No tests discovered in {path.name}"
-                  )
+          python test-homes/run_required_unit_tests.py test_validate_technical_review.py 95
 
-              total += count
+          python test-homes/run_required_unit_tests.py test_validate_technical_review_history.py 32
 
-          print("=" * 80)
-          print(f"Total test suites: {len(files)}")
-          print(f"Total discovered tests: {total}")
+          python test-homes/run_required_unit_tests.py test_validate_technical_review_record_history.py 36
 
-          if errors:
-              for error in errors:
-                  print(f"ERROR: {error}")
+          python test-homes/run_required_unit_tests.py test_validate_technical_review_records.py 40
 
-              sys.exit(1)
+          python test-homes/run_required_unit_tests.py test_validate_technical_review_registry.py 24
 
-          print("UNIT TEST INVENTORY PASSED")
-          PY
+          echo "========================================"
+          echo "ALL REQUIRED REPOSITORY UNIT TESTS PASSED"
+          echo "Verified test suites: 15/15"
+          echo "Verified unit tests: 408/408"
+          echo "========================================"
 
 
 
