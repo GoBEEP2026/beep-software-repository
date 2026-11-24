@@ -173,5 +173,8 @@ jobs:
       - name: Validate technical review supporting documents
         run: python test-homes/validate_technical_review_records.py test-homes/reference-home-registry.json
 
+      - name: Run historical technical review document preservation unit tests
+        run: python -m unittest discover -s test-homes -p "test_validate_technical_review_record_history.py" -v
+
 
 
