@@ -35,7 +35,7 @@
           "version": "1.0.0",
           "change_type": "INITIAL",
           "description": "Initial development reference-home definition.",
-          "change_reason": "",
+          "change_reason": "Establish a development reference home for testing vendor submission and comparison workflows.",
           "anticipated_impact": "Establishes the initial development baseline. Modeling impacts and software consistency have not yet been verified.",
           "affected_components": [
             "Building geometry",
