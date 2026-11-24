@@ -260,9 +260,12 @@ def validate_reference_versioning(registry_path):
                 "must be 1.0.0"
             )
 
+   
     # Validate parent-version relationships.
     errors.extend(validate_parent_versions(homes))
 
+    # Validate linear version history.
+    errors.extend(validate_linear_version_history(homes))
 
     return errors
 
