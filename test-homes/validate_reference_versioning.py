@@ -193,6 +193,88 @@ def validate_linear_version_history(homes):
 
 
 
+def validate_historical_versions(previous_homes, current_homes):
+    """Preserve previously registered reference-home versions."""
+
+    errors = []
+
+    def build_version_index(homes, registry_name):
+        index = {}
+
+        if not isinstance(homes, list):
+            errors.append(
+                f"{registry_name}: Invalid reference homes array"
+            )
+            return index
+
+        for home in homes:
+            if not isinstance(home, dict):
+                errors.append(
+                    f"{registry_name}: Malformed reference home"
+                )
+                continue
+
+            home_id = home.get("test_home_id")
+            version = home.get("test_home_version")
+
+            if (
+                not isinstance(home_id, str)
+                or not home_id.strip()
+                or not is_valid_version(version)
+            ):
+                errors.append(
+                    f"{registry_name}: Invalid reference home identity"
+                )
+                continue
+
+            key = (home_id, version)
+
+            if key in index:
+                errors.append(
+                    f"{registry_name}: Duplicate version "
+                    f"{home_id}/{version}"
+                )
+                continue
+
+            index[key] = home
+
+        return index
+
+    previous_index = build_version_index(
+        previous_homes,
+        "Previous registry",
+    )
+
+    current_index = build_version_index(
+        current_homes,
+        "Current registry",
+    )
+
+    for key, previous_home in previous_index.items():
+        home_id, version = key
+
+        if key not in current_index:
+            errors.append(
+                f"{home_id}/{version}: Previously registered "
+                "version cannot be deleted or renumbered"
+            )
+            continue
+
+        current_home = current_index[key]
+
+        previous_parent = previous_home.get("parent_version")
+        current_parent = current_home.get("parent_version")
+
+        if previous_parent != current_parent:
+            errors.append(
+                f"{home_id}/{version}: Historical parent "
+                "version cannot be changed"
+            )
+
+    return errors
+
+
+
 
 
 def validate_reference_versioning(registry_path):
