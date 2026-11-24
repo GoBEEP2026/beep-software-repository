@@ -176,5 +176,8 @@ jobs:
       - name: Run historical technical review document preservation unit tests
         run: python -m unittest discover -s test-homes -p "test_validate_technical_review_record_history.py" -v
 
+      - name: Validate required unit test runner
+        run: python test-homes/run_required_unit_tests.py test_run_required_unit_tests.py 20
+
 
 
