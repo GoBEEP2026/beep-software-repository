@@ -8,7 +8,7 @@
       "parent_version": null,
       "name": "B.E.E.P. Sample Reference Home",
       "description": "Development reference home for testing vendor submission and comparison workflows.",
-      "status": "UNDER_REVIEW",
+      "status": "DEVELOPMENT",
       "building_type": "SINGLE_FAMILY_DETACHED",
       "conditioned_floor_area_ft2": 2200,
       "conditioned_volume_ft3": 19800,
@@ -25,14 +25,14 @@
       ],
       "test_cycles": [],
       "review": {
-        "reviewer": "FICTIONAL TEST REVIEWER",
-        "review_record": "BEEP-REV-CONTROLLED-TEST-001",
-        "review_status": "COMPLETED",
-        "review_date": "2026-11-24",
-        "review_findings": "CONTROLLED VALIDATION TEST ONLY. No actual technical review has been performed.",
-        "review_recommendation": "REVISIONS_REQUIRED",
-        "conflict_of_interest_disclosure": "Fictional test data only. No actual reviewer has been assigned.",
-        "reviewed_content_sha256": "c97c955f8b0048b749ebcf45053684bdbfe5f850090a1ad523f611378163400e"
+        "reviewer": null,
+        "review_record": null,
+        "review_status": "NOT_STARTED",
+        "review_date": null,
+        "review_findings": null,
+        "review_recommendation": null,
+        "conflict_of_interest_disclosure": null,
+        "reviewed_content_sha256": null
       },
       "approval": {
         "approved_by": null,
