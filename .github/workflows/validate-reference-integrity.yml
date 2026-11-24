@@ -132,3 +132,9 @@ jobs:
       - name: Validate reference home semantic versions
         run: |
           python test-homes/validate_reference_versioning.py test-homes/reference-home-registry.json
+
+
+      - name: Validate historical reference home versions
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          python test-homes/validate_reference_versioning.py --historical /tmp/beep-previous-reference-registry.json test-homes/reference-home-registry.json
