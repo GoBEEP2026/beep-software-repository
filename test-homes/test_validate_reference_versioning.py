@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 
+
 from validate_reference_versioning import (
     is_valid_version,
     parse_version,
@@ -15,7 +16,9 @@ from validate_reference_versioning import (
     validate_linear_version_history,
     validate_historical_versions,
     validate_reference_versioning,
+    validate_historical_registries,
 )
+
 
 
 
@@ -1062,6 +1065,214 @@ class TestReferenceVersioning(unittest.TestCase):
                         malformed,
                     )
                 )
+
+
+
+    def test_historical_registry_comparison_accepted(self):
+        previous_path = (
+            Path(self.temp_dir.name) / "previous.json"
+        )
+
+        registry = {
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                    "parent_version": None,
+                }
+            ]
+        }
+
+        previous_path.write_text(
+            json.dumps(registry),
+            encoding="utf-8",
+        )
+
+        self.write_registry(registry)
+
+        self.assertEqual(
+            validate_historical_registries(
+                previous_path,
+                self.registry_path,
+            ),
+            [],
+        )
+
+    def test_historical_registry_deletion_rejected(self):
+        previous_path = (
+            Path(self.temp_dir.name) / "previous.json"
+        )
+
+        previous_path.write_text(
+            json.dumps({
+                "reference_homes": [
+                    {
+                        "test_home_id": "BEEP-HOME-TEST",
+                        "test_home_version": "1.0.0",
+                        "parent_version": None,
+                    }
+                ]
+            }),
+            encoding="utf-8",
+        )
+
+        self.write_registry({
+            "reference_homes": []
+        })
+
+        errors = validate_historical_registries(
+            previous_path,
+            self.registry_path,
+        )
+
+        self.assertTrue(
+            any(
+                "cannot be deleted or renumbered" in error
+                for error in errors
+            )
+        )
+
+    def test_missing_historical_registry_rejected(self):
+        missing_path = (
+            Path(self.temp_dir.name) / "missing.json"
+        )
+
+        self.write_registry({
+            "reference_homes": []
+        })
+
+        for previous_path, current_path in (
+            (missing_path, self.registry_path),
+            (self.registry_path, missing_path),
+        ):
+            with self.subTest(
+                previous=previous_path,
+                current=current_path,
+            ):
+                errors = validate_historical_registries(
+                    previous_path,
+                    current_path,
+                )
+
+                self.assertTrue(
+                    any(
+                        "Unable to read registry" in error
+                        for error in errors
+                    )
+                )
+
+    def test_invalid_historical_registry_json_rejected(self):
+        invalid_path = (
+            Path(self.temp_dir.name) / "invalid.json"
+        )
+
+        invalid_path.write_text(
+            "{invalid json",
+            encoding="utf-8",
+        )
+
+        self.write_registry({
+            "reference_homes": []
+        })
+
+        for previous_path, current_path in (
+            (invalid_path, self.registry_path),
+            (self.registry_path, invalid_path),
+        ):
+            with self.subTest(
+                previous=previous_path,
+                current=current_path,
+            ):
+                errors = validate_historical_registries(
+                    previous_path,
+                    current_path,
+                )
+
+                self.assertTrue(
+                    any(
+                        "Unable to read registry" in error
+                        for error in errors
+                    )
+                )
+
+    def test_invalid_historical_registry_structure(self):
+        invalid_path = (
+            Path(self.temp_dir.name) / "invalid.json"
+        )
+
+        self.write_registry({
+            "reference_homes": []
+        })
+
+        for invalid_registry in (
+            [],
+            None,
+            "invalid",
+        ):
+            with self.subTest(
+                registry=invalid_registry
+            ):
+                invalid_path.write_text(
+                    json.dumps(invalid_registry),
+                    encoding="utf-8",
+                )
+
+                for previous_path, current_path in (
+                    (invalid_path, self.registry_path),
+                    (self.registry_path, invalid_path),
+                ):
+                    errors = validate_historical_registries(
+                        previous_path,
+                        current_path,
+                    )
+
+                    self.assertTrue(
+                        any(
+                            "Registry must be a JSON object"
+                            in error
+                            for error in errors
+                        )
+                    )
+
+    def test_invalid_historical_reference_homes_array(self):
+        invalid_path = (
+            Path(self.temp_dir.name) / "invalid.json"
+        )
+
+        self.write_registry({
+            "reference_homes": []
+        })
+
+        for invalid_registry in (
+            {},
+            {"reference_homes": None},
+            {"reference_homes": {}},
+            {"reference_homes": "invalid"},
+        ):
+            with self.subTest(
+                registry=invalid_registry
+            ):
+                invalid_path.write_text(
+                    json.dumps(invalid_registry),
+                    encoding="utf-8",
+                )
+
+                for previous_path, current_path in (
+                    (invalid_path, self.registry_path),
+                    (self.registry_path, invalid_path),
+                ):
+                    errors = validate_historical_registries(
+                        previous_path,
+                        current_path,
+                    )
+
+                    self.assertTrue(
+                        any(
+                            "Missing or invalid reference_homes array"
+                            in error
+                            for error in errors
+                        )
+                    )
 
 
 
