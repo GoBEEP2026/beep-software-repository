@@ -5,11 +5,13 @@ from pathlib import Path
 
 
 
+
 from validate_reference_versioning import (
     is_valid_version,
     parse_version,
     get_version_change_type,
     validate_parent_versions,
+    validate_linear_version_history,
     validate_reference_versioning,
 )
 
@@ -634,6 +636,139 @@ class TestReferenceVersioning(unittest.TestCase):
                 in error
                 for error in errors
             )
+        )
+
+
+
+    def test_valid_linear_version_history(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": version,
+                "parent_version": parent,
+            }
+            for version, parent in (
+                ("1.0.0", None),
+                ("1.0.1", "1.0.0"),
+                ("1.1.0", "1.0.1"),
+                ("2.0.0", "1.1.0"),
+            )
+        ]
+
+        self.assertEqual(
+            validate_linear_version_history(homes),
+            [],
+        )
+
+    def test_branching_version_history_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": version,
+                "parent_version": parent,
+            }
+            for version, parent in (
+                ("1.0.0", None),
+                ("1.0.1", "1.0.0"),
+                ("1.1.0", "1.0.0"),
+            )
+        ]
+
+        errors = validate_linear_version_history(homes)
+
+        self.assertTrue(
+            any(
+                "Parent must be the immediate predecessor"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_duplicate_version_history_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            },
+        ]
+
+        errors = validate_linear_version_history(homes)
+
+        self.assertTrue(
+            any(
+                "Duplicate reference home version" in error
+                for error in errors
+            )
+        )
+
+    def test_linear_history_skipped_version_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.3",
+                "parent_version": "1.0.0",
+            },
+        ]
+
+        errors = validate_linear_version_history(homes)
+
+        self.assertTrue(
+            any(
+                "Invalid sequential version increment"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_numeric_version_ordering(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": f"1.{minor}.0",
+                "parent_version": (
+                    None if minor == 0
+                    else f"1.{minor - 1}.0"
+                ),
+            }
+            for minor in reversed(range(11))
+        ]
+
+        self.assertEqual(
+            validate_linear_version_history(homes),
+            [],
+        )
+
+    def test_independent_home_version_histories(self):
+        homes = [
+            {
+                "test_home_id": home_id,
+                "test_home_version": version,
+                "parent_version": parent,
+            }
+            for home_id in (
+                "BEEP-HOME-001",
+                "BEEP-HOME-002",
+            )
+            for version, parent in (
+                ("1.0.0", None),
+                ("1.0.1", "1.0.0"),
+            )
+        ]
+
+        self.assertEqual(
+            validate_linear_version_history(homes),
+            [],
         )
 
 
