@@ -549,6 +549,38 @@ def validate_historical_registries(
 
 
 
+def validate_registry_change_documentation(registry_path):
+    """Validate change documentation in a registry file."""
+
+    try:
+        registry = json.loads(
+            Path(registry_path).read_text(
+                encoding="utf-8"
+            )
+        )
+    except (OSError, UnicodeError, ValueError) as exc:
+        return [
+            f"Unable to read reference registry: {exc}"
+        ]
+
+    if not isinstance(registry, dict):
+        return [
+            "Reference registry must be a JSON object"
+        ]
+
+    homes = registry.get("reference_homes")
+
+    if not isinstance(homes, list) or not homes:
+        return [
+            "Registry must contain a nonempty "
+            "reference_homes array"
+        ]
+
+    return validate_change_documentation(homes)
+
+
+
+
 
 
 if __name__ == "__main__":
@@ -556,10 +588,25 @@ if __name__ == "__main__":
         validation_errors = validate_reference_versioning(
             sys.argv[1]
         )
-
         validation_name = "REFERENCE HOME VERSION"
 
-    elif len(sys.argv) == 4 and sys.argv[1] == "--historical":
+    elif (
+        len(sys.argv) == 3
+        and sys.argv[1] == "--documentation"
+    ):
+        validation_errors = (
+            validate_registry_change_documentation(
+                sys.argv[2]
+            )
+        )
+        validation_name = (
+            "REFERENCE HOME CHANGE DOCUMENTATION"
+        )
+
+    elif (
+        len(sys.argv) == 4
+        and sys.argv[1] == "--historical"
+    ):
         previous_registry = sys.argv[2]
         current_registry = sys.argv[3]
 
@@ -574,13 +621,19 @@ if __name__ == "__main__":
             )
         )
 
-        validation_name = "HISTORICAL REFERENCE HOME VERSION"
+        validation_name = (
+            "HISTORICAL REFERENCE HOME VERSION"
+        )
 
     else:
         print("Usage:")
         print(
             "  python validate_reference_versioning.py "
             "<reference-registry>"
+        )
+        print(
+            "  python validate_reference_versioning.py "
+            "--documentation <reference-registry>"
         )
         print(
             "  python validate_reference_versioning.py "
