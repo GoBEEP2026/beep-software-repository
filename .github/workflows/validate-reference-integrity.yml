@@ -73,6 +73,15 @@ jobs:
           git show "${BASE_SHA}:test-homes/reference-home-registry.json" > /tmp/beep-previous-reference-registry.json
           python -m json.tool /tmp/beep-previous-reference-registry.json > /dev/null
 
+      - name: Validate historical audit decision authorization
+        if: github.event_name == 'pull_request'
+        run: |
+          python test-homes/validate_audit_decision_history.py \
+            /tmp/beep-previous-reference-registry.json \
+            test-homes/reference-home-registry.json \
+            /tmp/beep-previous-approval-audit.json \
+            test-homes/reference-approval-audit.json
+
       - name: Validate reference home lifecycle transitions
         if: always() && github.event_name == 'pull_request'
         env:
@@ -166,6 +175,8 @@ jobs:
 
           python test-homes/run_required_unit_tests.py test_validate_audit_append_only.py 5
 
+          python test-homes/run_required_unit_tests.py test_validate_audit_decision_history.py 40
+
           python test-homes/run_required_unit_tests.py test_validate_audit_history.py 40
 
           python test-homes/run_required_unit_tests.py test_validate_audit_review_evidence.py 40
@@ -216,6 +227,6 @@ jobs:
 
           echo "========================================"
           echo "ALL REQUIRED REPOSITORY UNIT TESTS PASSED"
-          echo "Verified test suites: 28/28"
-          echo "Verified unit tests: 914/914"
+          echo "Verified test suites: 29/29"
+          echo "Verified unit tests: 954/954"
           echo "========================================"
