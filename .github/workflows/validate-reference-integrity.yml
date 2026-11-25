@@ -131,6 +131,13 @@ jobs:
         run: |
           python test-homes/validate_review_document_reservations.py test-homes/reference-review-identifier-registry.json approvals
 
+      - name: Validate historical technical review document creation authorization
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python test-homes/validate_review_document_creation.py "$BASE_SHA"
+
       - name: Enforce all required repository unit test counts
         run: |
           set -e
