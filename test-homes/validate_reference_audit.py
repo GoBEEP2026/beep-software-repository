@@ -628,13 +628,48 @@ def validate_audit_data(audit):
     return errors
 
 
+def validate_live_audit_data(audit):
+
+    """
+    Validate the live approval audit registry.
+
+    Historical schema versions remain supported
+    by validate_audit_data(), but the live registry
+    must use the current schema version.
+    """
+
+    if not isinstance(audit, dict):
+
+        return [
+            "Audit log must be a JSON object"
+        ]
+
+    schema_version = audit.get(
+        "audit_schema_version"
+    )
+
+    if schema_version != CURRENT_SCHEMA_VERSION:
+
+        return [
+            "Live audit registry must use "
+            f"schema version {CURRENT_SCHEMA_VERSION}"
+        ]
+
+    return validate_audit_data(audit)
+
+
 def validate_audit(path=AUDIT_FILE):
+
+    """
+    Load and validate the live approval audit
+    registry using the current schema.
+    """
 
     try:
 
         audit = load_audit_registry(path)
 
-        return validate_audit_data(audit)
+        return validate_live_audit_data(audit)
 
     except (
         OSError,
