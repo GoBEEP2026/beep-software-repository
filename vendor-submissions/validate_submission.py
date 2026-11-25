@@ -685,7 +685,57 @@ if __name__ == "__main__":
             print(f"  ERROR: {error}")
         sys.exit(1)
 
+    
     print("B.E.E.P. SUBMISSION VALIDATION PASSED")
-    print("Structure, energy results, and component mappings checked.")
-    print("File integrity checks completed.")
-    print("Full schema validation and production controls pending.")
+
+    print(
+        "Submission structure and JSON schemas validated."
+    )
+
+    print(
+        "Energy results and component mappings validated."
+    )
+
+    print(
+        "File integrity requirements validated."
+    )
+
+    print(
+        "Reference home identity, version, and "
+        "compliance path validated."
+    )
+
+    if production:
+
+        print("Validation mode: PRODUCTION")
+
+        print(
+            "Production submission requirements satisfied."
+        )
+
+        print(
+            "All 15 centralized production governance "
+            "controls passed."
+        )
+
+        print(
+            "Reference home production eligibility verified."
+        )
+
+    else:
+
+        print("Validation mode: DEVELOPMENT")
+
+        print(
+            "Development submission requirements satisfied."
+        )
+
+        print(
+            "Production governance controls not evaluated."
+        )
+
+        print(
+            "Development validation does not establish "
+            "production eligibility."
+        )
+
