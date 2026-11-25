@@ -5,8 +5,6 @@ import math
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
-import importlib.util
-
 
 # Locate trusted repository governance validators.
 REPOSITORY_ROOT = (
@@ -332,75 +330,6 @@ def validate_json_schemas(documents, folder):
             )
 
     return errors
-
-
-
-def validate_reference_approval_metadata(
-    registry_path,
-    audit_path=None,
-):
-
-    """
-    Run the B.E.E.P. reference-home approval validator
-    against the selected registry.
-    """
-
-    validator_path = (
-        Path(__file__).resolve().parent.parent
-        / "test-homes"
-        / "validate_reference_approval.py"
-    )
-
-    spec = importlib.util.spec_from_file_location(
-        "beep_reference_approval",
-        validator_path
-    )
-
-    if spec is None or spec.loader is None:
-        return ["Unable to load reference approval validator"]
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-   
-    return module.validate_reference_approval(
-        registry_path=registry_path,
-        audit_path=audit_path,
-    )
-
-
-
-
-def validate_reference_approval_records(
-    registry_path,
-    approvals_directory=None
-):
-    """
-    Verify approval documents for production
-    reference homes.
-    """
-
-    repository_root = Path(__file__).resolve().parent.parent
-
-    validator_path = (
-        repository_root
-        / "test-homes"
-        / "validate_approval_records.py"
-    )
-
-    spec = importlib.util.spec_from_file_location(
-        "validate_approval_records",
-        validator_path
-    )
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    return module.validate_approval_records(
-        registry_path=registry_path,
-        approvals_directory=approvals_directory
-    )
-
 
 
 
