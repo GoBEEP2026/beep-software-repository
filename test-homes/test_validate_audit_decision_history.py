@@ -18,9 +18,7 @@ from validate_audit_decision_history import (
     validate_audit_decision_history_data,
 )
 
-from test_validate_retirement_audit_consistency import (
-    TestRetirementAuditConsistency as RetirementFixtures,
-)
+import test_validate_retirement_audit_consistency as retirement_fixtures
 
 
 class TestAuditDecisionHistory(unittest.TestCase):
@@ -40,7 +38,9 @@ class TestAuditDecisionHistory(unittest.TestCase):
             self.root / "current-audit.json",
         ]
 
-        self.fixtures = RetirementFixtures()
+        self.fixtures = (
+            retirement_fixtures.TestRetirementAuditConsistency()
+        )
 
     def make_home(self, *args, **kwargs):
 
