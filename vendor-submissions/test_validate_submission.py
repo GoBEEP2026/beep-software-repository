@@ -502,6 +502,7 @@ class TestVendorSubmissionValidator(unittest.TestCase):
         # Validate the complete production submission
         # against the fictional governance evidence.
 
+        
         errors = validate_submission(
             self.folder,
             production=True,
@@ -510,7 +511,11 @@ class TestVendorSubmissionValidator(unittest.TestCase):
                 "approvals_directory"
             ],
             audit_path=fixture["audit_path"],
+            identifier_registry_path=fixture[
+                "identifier_registry_path"
+            ],
         )
+
 
         self.assertEqual(errors, [])
 
