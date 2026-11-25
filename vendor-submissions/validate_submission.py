@@ -704,10 +704,11 @@ if __name__ == "__main__":
         "Reference home identity, version, and "
         "compliance path validated."
     )
-
-    if production:
+    
+    if "--production" in sys.argv:
 
         print("Validation mode: PRODUCTION")
+
 
         print(
             "Production submission requirements satisfied."
