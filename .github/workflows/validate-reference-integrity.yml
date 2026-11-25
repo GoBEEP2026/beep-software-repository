@@ -127,7 +127,7 @@ jobs:
         run: |
           python test-homes/validate_review_assignment_history.py "$BASE_SHA"
 
-                - name: Validate technical review document reservations
+      - name: Validate technical review document reservations
         run: |
           python test-homes/validate_review_document_reservations.py test-homes/reference-review-identifier-registry.json approvals
 
