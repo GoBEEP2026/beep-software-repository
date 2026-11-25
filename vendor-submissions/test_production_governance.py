@@ -1,4 +1,3 @@
-
 import json
 import tempfile
 import unittest
@@ -654,6 +653,91 @@ class TestProductionGovernance(unittest.TestCase):
                 "Invalid validator response"
             ],
         )
+
+    def verify_partial_governance_inputs_rejected(
+        self,
+        supplied_paths,
+    ):
+
+        from itertools import combinations
+
+        governance_inputs = {
+            "registry_path": self.registry_path,
+            "audit_path": self.audit_path,
+            "identifier_registry_path": (
+                self.identifier_registry_path
+            ),
+            "approvals_directory": (
+                self.approvals_directory
+            ),
+        }
+
+        # Confirm the complete governance fixture
+        # passes before testing incomplete inputs.
+
+        baseline_errors = validate_production_governance(
+            **governance_inputs,
+        )
+
+        self.assertEqual(
+            baseline_errors,
+            [],
+        )
+
+        expected_errors = [
+            "Production governance requires either "
+            "all four explicit governance paths "
+            "or all authoritative repository defaults"
+        ]
+
+        # Verify every incomplete combination
+        # containing the specified number of paths.
+
+        for selected_paths in combinations(
+            governance_inputs,
+            supplied_paths,
+        ):
+
+            with self.subTest(
+                selected_paths=selected_paths
+            ):
+
+                partial_inputs = {
+                    key: governance_inputs[key]
+                    for key in selected_paths
+                }
+
+                errors = validate_production_governance(
+                    **partial_inputs,
+                )
+
+                self.assertEqual(
+                    errors,
+                    expected_errors,
+                )
+
+
+    def test_governance_rejects_one_explicit_path(self):
+
+        self.verify_partial_governance_inputs_rejected(
+            1
+        )
+
+
+    def test_governance_rejects_two_explicit_paths(self):
+
+        self.verify_partial_governance_inputs_rejected(
+            2
+        )
+
+
+    def test_governance_rejects_three_explicit_paths(self):
+
+        self.verify_partial_governance_inputs_rejected(
+            3
+        )
+
+
 
 
 if __name__ == "__main__":
