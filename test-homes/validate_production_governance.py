@@ -1,4 +1,3 @@
-
 import json
 import sys
 from pathlib import Path
@@ -317,6 +316,29 @@ def validate_production_governance(
     identifier_registry_path=None,
     approvals_directory=None,
 ):
+    
+    # Require a complete and consistent set of
+    # governance inputs before assigning defaults.
+
+    governance_inputs = (
+        registry_path,
+        audit_path,
+        identifier_registry_path,
+        approvals_directory,
+    )
+
+    if (
+        any(path is not None for path in governance_inputs)
+        and not all(
+            path is not None for path in governance_inputs
+        )
+    ):
+        return [
+            "Production governance requires either "
+            "all four explicit governance paths "
+            "or all authoritative repository defaults"
+        ]
+
     """
     Coordinate current-state governance controls.
 
