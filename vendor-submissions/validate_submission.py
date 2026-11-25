@@ -549,16 +549,15 @@ def validate_production_requirements(documents):
 
 
 
-
-
-
 def validate_submission(
     folder,
     production=False,
     registry_path=None,
     approvals_directory=None,
     audit_path=None,
+    identifier_registry_path=None,
 ):
+
 
 
     folder = Path(folder)
