@@ -686,27 +686,50 @@ def validate_submission(
             validate_production_requirements(documents)
         )
 
-    # Verify approval documentation for production submissions.
+    
+    # Enforce centralized governance controls
+    # for production submissions.
     if production:
-        
-        errors.extend(
-            validate_reference_approval_metadata(
-                registry_path,
-                audit_path=audit_path,
+
+        governance_inputs = (
+            registry_path,
+            audit_path,
+            identifier_registry_path,
+            approvals_directory,
+        )
+
+        # Governance inputs must use either all
+        # authoritative defaults or a complete
+        # isolated set of explicitly supplied paths.
+        if (
+            any(path is not None for path in governance_inputs)
+            and not all(
+                path is not None for path in governance_inputs
             )
-        )
+        ):
+            errors.append(
+                "Production governance requires either "
+                "all four explicit governance paths "
+                "or all authoritative repository defaults"
+            )
 
+        else:
 
-        errors.extend(
-            
-validate_reference_approval_records(
-    registry_path,
-    approvals_directory=approvals_directory
-)
-
-        )
+            errors.extend(
+                validate_production_governance(
+                    registry_path=registry_path,
+                    audit_path=audit_path,
+                    identifier_registry_path=(
+                        identifier_registry_path
+                    ),
+                    approvals_directory=(
+                        approvals_directory
+                    ),
+                )
+            )
 
     return errors
+
 
 
 
