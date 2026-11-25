@@ -163,6 +163,10 @@ jobs:
         run: |
           python test-homes/demonstrate_review_document_creation_failure.py
 
+      - name: Demonstrate controlled historical audit authorization failure
+        run: 
+          python test-homes/demonstrate_audit_decision_history_failure.py
+
       - name: Enforce all required repository unit test counts
         run: |
           set -e
