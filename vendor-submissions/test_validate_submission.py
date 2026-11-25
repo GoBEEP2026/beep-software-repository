@@ -867,6 +867,138 @@ class TestVendorSubmissionValidator(unittest.TestCase):
                     f"Actual validation errors: {errors}",
                 )
 
+    def verify_partial_governance_inputs_rejected(
+        self,
+        supplied_paths,
+    ):
+
+        # Prepare an otherwise valid production submission.
+
+        submission_path = self.folder / "submission.json"
+
+        submission = json.loads(
+            submission_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        submission["software"]["engine_version"] = "1.0.0"
+
+        submission_path.write_text(
+            json.dumps(submission, indent=2),
+            encoding="utf-8",
+        )
+
+        results_path = self.folder / "results.json"
+
+        results = json.loads(
+            results_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        results["calculation_status"] = "COMPLETED"
+
+        results_path.write_text(
+            json.dumps(results, indent=2),
+            encoding="utf-8",
+        )
+
+        self.generate_test_hashes()
+
+        # Create complete isolated fictional
+        # governance evidence.
+
+        governance_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        self.addCleanup(
+            governance_directory.cleanup
+        )
+
+        fixture = create_governance_fixture(
+            Path(governance_directory.name)
+        )
+
+        governance_inputs = {
+            "registry_path": fixture["registry_path"],
+            "audit_path": fixture["audit_path"],
+            "identifier_registry_path": fixture[
+                "identifier_registry_path"
+            ],
+            "approvals_directory": fixture[
+                "approvals_directory"
+            ],
+        }
+
+        # Establish successful production validation
+        # using all four governance inputs.
+
+        baseline_errors = validate_submission(
+            self.folder,
+            production=True,
+            **governance_inputs,
+        )
+
+        self.assertEqual(
+            baseline_errors,
+            [],
+        )
+
+        # Test every combination containing the
+        # specified number of explicit paths.
+
+        from itertools import combinations
+
+        for selected_paths in combinations(
+            governance_inputs,
+            supplied_paths,
+        ):
+
+            with self.subTest(
+                selected_paths=selected_paths
+            ):
+
+                partial_inputs = {
+                    key: governance_inputs[key]
+                    for key in selected_paths
+                }
+
+                errors = validate_submission(
+                    self.folder,
+                    production=True,
+                    **partial_inputs,
+                )
+
+                self.assertIn(
+                    "Production governance requires either "
+                    "all four explicit governance paths "
+                    "or all authoritative repository defaults",
+                    errors,
+                )
+
+
+    def test_production_rejects_one_governance_path(self):
+
+        self.verify_partial_governance_inputs_rejected(
+            1
+        )
+
+
+    def test_production_rejects_two_governance_paths(self):
+
+        self.verify_partial_governance_inputs_rejected(
+            2
+        )
+
+
+    def test_production_rejects_three_governance_paths(self):
+
+        self.verify_partial_governance_inputs_rejected(
+            3
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
