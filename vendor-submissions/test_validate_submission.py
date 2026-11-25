@@ -731,70 +731,141 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             any("not uniquely registered" in e for e in errors)
         )
 
+    
     def test_production_rejects_incomplete_approval(self):
-        registry_source = (
-            Path(__file__).resolve().parent.parent
-            / "test-homes"
-            / "reference-home-registry.json"
+
+        # Prepare an otherwise valid production submission.
+
+        submission_path = self.folder / "submission.json"
+
+        submission = json.loads(
+            submission_path.read_text(
+                encoding="utf-8"
+            )
         )
 
-        registry = json.loads(
-            registry_source.read_text(encoding="utf-8")
+        submission["software"]["engine_version"] = "1.0.0"
+
+        submission_path.write_text(
+            json.dumps(submission, indent=2),
+            encoding="utf-8",
         )
 
-        # Claim the registry and home are approved.
-        registry["registry_status"] = "APPROVED"
-        registry["reference_homes"][0]["status"] = "APPROVED"
+        results_path = self.folder / "results.json"
 
-        # Deliberately provide incomplete approval data.
-        registry["reference_homes"][0]["approval"] = {
-            "approved_by": None,
-            "approval_date": None,
-            "approval_record": None
+        results = json.loads(
+            results_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        results["calculation_status"] = "COMPLETED"
+
+        results_path.write_text(
+            json.dumps(results, indent=2),
+            encoding="utf-8",
+        )
+
+        self.generate_test_hashes()
+
+        # Create complete isolated fictional
+        # governance evidence.
+
+        governance_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        self.addCleanup(
+            governance_directory.cleanup
+        )
+
+        fixture = create_governance_fixture(
+            Path(governance_directory.name)
+        )
+
+        governance_inputs = {
+            "registry_path": fixture["registry_path"],
+            "approvals_directory": fixture[
+                "approvals_directory"
+            ],
+            "audit_path": fixture["audit_path"],
+            "identifier_registry_path": fixture[
+                "identifier_registry_path"
+            ],
         }
 
-        registry["reference_homes"][0]["test_cycles"] = []
+        # Confirm the complete production submission
+        # passes before modifying approval metadata.
 
-        registry_path = self.folder / "incomplete-approval.json"
+        baseline_errors = validate_submission(
+            self.folder,
+            production=True,
+            **governance_inputs,
+        )
+
+        self.assertEqual(
+            baseline_errors,
+            [],
+        )
+
+        # Load the isolated reference home registry.
+
+        registry_path = fixture["registry_path"]
+
+        registry = json.loads(
+            registry_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        home = registry["reference_homes"][0]
+
+        # Deliberately invalidate approval metadata
+        # while retaining the claimed APPROVED status.
+
+        home["approval"]["approved_by"] = None
+        home["approval"]["approval_date"] = None
+        home["approval"]["approval_record"] = None
+
+        home["test_cycles"] = []
 
         registry_path.write_text(
             json.dumps(registry, indent=2),
-            encoding="utf-8"
+            encoding="utf-8",
         )
+
+        # Validate the same production submission
+        # against the incomplete approval metadata.
 
         errors = validate_submission(
             self.folder,
             production=True,
-            registry_path=registry_path
+            **governance_inputs,
         )
 
-        
-        self.assertTrue(
-            any("Missing approval authority" in e for e in errors),
-            f"Actual validation errors: {errors}"
+        expected_errors = (
+            "Missing approval authority",
+            "Invalid approval date",
+            "Missing approval record",
+            "No assigned test cycles",
         )
 
+        for expected_error in expected_errors:
 
-        
-        self.assertTrue(
-            any("Invalid approval date" in e for e in errors),
-            f"Actual validation errors: {errors}"
-        )
+            with self.subTest(
+                expected_error=expected_error
+            ):
 
-
-        
-        self.assertTrue(
-            any("Missing approval record" in e for e in errors),
-            f"Actual validation errors: {errors}"
-        )
-
-
-       
-        self.assertTrue(
-            any("No assigned test cycles" in e for e in errors),
-            f"Actual validation errors: {errors}"
-        )
-
+                self.assertTrue(
+                    any(
+                        e.startswith(
+                            "Reference approval metadata:"
+                        )
+                        and expected_error in e
+                        for e in errors
+                    ),
+                    f"Actual validation errors: {errors}",
+                )
 
 
 if __name__ == "__main__":
