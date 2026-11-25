@@ -5,7 +5,26 @@ import math
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
-import importlib.util
+
+# Locate trusted repository governance validators.
+REPOSITORY_ROOT = (
+    Path(__file__).resolve().parent.parent
+)
+
+TEST_HOMES_DIRECTORY = (
+    REPOSITORY_ROOT / "test-homes"
+)
+
+if str(TEST_HOMES_DIRECTORY) not in sys.path:
+    sys.path.insert(
+        0,
+        str(TEST_HOMES_DIRECTORY),
+    )
+
+from validate_production_governance import (
+    validate_production_governance,
+)
+
 
 REQUIRED_FILES = [
     "submission.json",
@@ -314,75 +333,6 @@ def validate_json_schemas(documents, folder):
 
 
 
-def validate_reference_approval_metadata(
-    registry_path,
-    audit_path=None,
-):
-
-    """
-    Run the B.E.E.P. reference-home approval validator
-    against the selected registry.
-    """
-
-    validator_path = (
-        Path(__file__).resolve().parent.parent
-        / "test-homes"
-        / "validate_reference_approval.py"
-    )
-
-    spec = importlib.util.spec_from_file_location(
-        "beep_reference_approval",
-        validator_path
-    )
-
-    if spec is None or spec.loader is None:
-        return ["Unable to load reference approval validator"]
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-   
-    return module.validate_reference_approval(
-        registry_path=registry_path,
-        audit_path=audit_path,
-    )
-
-
-
-
-def validate_reference_approval_records(
-    registry_path,
-    approvals_directory=None
-):
-    """
-    Verify approval documents for production
-    reference homes.
-    """
-
-    repository_root = Path(__file__).resolve().parent.parent
-
-    validator_path = (
-        repository_root
-        / "test-homes"
-        / "validate_approval_records.py"
-    )
-
-    spec = importlib.util.spec_from_file_location(
-        "validate_approval_records",
-        validator_path
-    )
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    return module.validate_approval_records(
-        registry_path=registry_path,
-        approvals_directory=approvals_directory
-    )
-
-
-
-
 def validate_reference_home(
     documents, production=False, registry_path=None
 ):
@@ -528,16 +478,44 @@ def validate_production_requirements(documents):
 
 
 
-
-
-
 def validate_submission(
     folder,
     production=False,
     registry_path=None,
     approvals_directory=None,
     audit_path=None,
+    identifier_registry_path=None,
 ):
+
+
+    # Reject incomplete production governance inputs
+    # before accessing submission or governance files.
+
+    if production:
+
+        governance_inputs = (
+            registry_path,
+            audit_path,
+            identifier_registry_path,
+            approvals_directory,
+        )
+
+        if (
+            any(
+                path is not None
+                for path in governance_inputs
+            )
+            and not all(
+                path is not None
+                for path in governance_inputs
+            )
+        ):
+            return [
+                "Production governance requires either "
+                "all four explicit governance paths "
+                "or all authoritative repository defaults"
+            ]
+
 
 
     folder = Path(folder)
@@ -666,27 +644,28 @@ def validate_submission(
             validate_production_requirements(documents)
         )
 
-    # Verify approval documentation for production submissions.
-    if production:
         
+    # Enforce centralized governance controls
+    # for production submissions.
+
+    if production:
+
         errors.extend(
-            validate_reference_approval_metadata(
-                registry_path,
+            validate_production_governance(
+                registry_path=registry_path,
                 audit_path=audit_path,
+                identifier_registry_path=(
+                    identifier_registry_path
+                ),
+                approvals_directory=(
+                    approvals_directory
+                ),
             )
         )
 
 
-        errors.extend(
-            
-validate_reference_approval_records(
-    registry_path,
-    approvals_directory=approvals_directory
-)
-
-        )
-
     return errors
+
 
 
 
@@ -713,7 +692,60 @@ if __name__ == "__main__":
             print(f"  ERROR: {error}")
         sys.exit(1)
 
+    
     print("B.E.E.P. SUBMISSION VALIDATION PASSED")
-    print("Structure, energy results, and component mappings checked.")
-    print("File integrity checks completed.")
-    print("Full schema validation and production controls pending.")
+
+    print(
+        "Submission structure and JSON schemas validated."
+    )
+
+    print(
+        "Energy results and component mappings validated."
+    )
+
+    print(
+        "File integrity requirements validated."
+    )
+
+    print(
+        "Reference home identity, version, and "
+        "compliance path validated."
+    )
+    
+    
+    if production_mode:
+
+
+        print("Validation mode: PRODUCTION")
+
+
+        print(
+            "Production submission requirements satisfied."
+        )
+
+        print(
+            "All 15 centralized production governance "
+            "controls passed."
+        )
+
+        print(
+            "Reference home production eligibility verified."
+        )
+
+    else:
+
+        print("Validation mode: DEVELOPMENT")
+
+        print(
+            "Development submission requirements satisfied."
+        )
+
+        print(
+            "Production governance controls not evaluated."
+        )
+
+        print(
+            "Development validation does not establish "
+            "production eligibility."
+        )
+

@@ -4,6 +4,9 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from governance_test_fixture import (
+    create_governance_fixture,
+)
 
 FOLDER = Path(__file__).resolve().parent
 
@@ -443,6 +446,80 @@ class TestVendorSubmissionValidator(unittest.TestCase):
                 for e in errors)
         )
 
+
+    def test_production_accepts_complete_submission(self):
+
+        submission_path = self.folder / "submission.json"
+
+        submission = json.loads(
+            submission_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        submission["software"]["engine_version"] = "1.0.0"
+
+        submission_path.write_text(
+            json.dumps(submission, indent=2),
+            encoding="utf-8",
+        )
+
+        results_path = self.folder / "results.json"
+
+        results = json.loads(
+            results_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        results["calculation_status"] = "COMPLETED"
+
+        results_path.write_text(
+            json.dumps(results, indent=2),
+            encoding="utf-8",
+        )
+
+        # Create isolated fictional governance evidence.
+        # These records do not represent an actual
+        # technical review or Board approval.
+
+        governance_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        self.addCleanup(
+            governance_directory.cleanup
+        )
+
+        fixture = create_governance_fixture(
+            Path(governance_directory.name)
+        )
+
+        # Generate actual vendor submission checksums.
+
+        self.generate_test_hashes()
+
+        # Validate the complete production submission
+        # against the fictional governance evidence.
+
+        
+        errors = validate_submission(
+            self.folder,
+            production=True,
+            registry_path=fixture["registry_path"],
+            approvals_directory=fixture[
+                "approvals_directory"
+            ],
+            audit_path=fixture["audit_path"],
+            identifier_registry_path=fixture[
+                "identifier_registry_path"
+            ],
+        )
+
+
+        self.assertEqual(errors, [])
+
+    
     def test_production_rejects_missing_checksum(self):
         self.generate_test_hashes()
 
@@ -464,186 +541,122 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             any("Missing production checksum" in e for e in errors)
         )
 
+   
+    def test_production_rejects_missing_approval_document(self):
 
-    def test_production_accepts_complete_submission(self):
+        # Prepare an otherwise valid production submission.
+
         submission_path = self.folder / "submission.json"
+
         submission = json.loads(
-            submission_path.read_text(encoding="utf-8")
+            submission_path.read_text(
+                encoding="utf-8"
+            )
         )
+
         submission["software"]["engine_version"] = "1.0.0"
+
         submission_path.write_text(
             json.dumps(submission, indent=2),
-            encoding="utf-8"
-        )
-
-        results_path = self.folder / "results.json"
-        results = json.loads(
-            results_path.read_text(encoding="utf-8")
-        )
-        results["calculation_status"] = "COMPLETED"
-        results_path.write_text(
-            json.dumps(results, indent=2),
-            encoding="utf-8"
-        )
-
-        # Create a temporary approved reference registry.
-        registry_source = (
-            Path(__file__).resolve().parent.parent
-            / "test-homes"
-            / "reference-home-registry.json"
-        )
-
-        registry = json.loads(
-            registry_source.read_text(encoding="utf-8")
-        )
-
-        registry["registry_status"] = "APPROVED"
-        registry["reference_homes"][0]["status"] = "APPROVED"
-
-       
-        registry["reference_homes"][0]["approval"] = {
-            "approved_by": "B.E.E.P. Board of Directors",
-            "approval_date": "2026-11-17",
-            "approval_record": "TEST-APPROVAL-001",
-            "board_resolution_reference": "TEST-BOARD-RES-001"
-        }
-
-
-        registry["reference_homes"][0]["test_cycles"] = [
-            "TEST-CYCLE-001"
-        ]
-
-        registry_path = self.folder / "test-registry.json"
-        registry_path.write_text(
-            json.dumps(registry, indent=2),
-            encoding="utf-8"
-        )
-
-        # Create a temporary approval document for this test.
-        approvals_directory = self.folder / "approvals"
-
-        approval_path = (
-            approvals_directory
-            / "BEEP-HOME-001"
-            / "1.0.0"
-            / "approval-record.md"
-        )
-
-        approval_path.parent.mkdir(
-            parents=True,
-            exist_ok=True
-        )
-
-       
-        approval_path.write_text(
-            "# B.E.E.P. Test Approval Record\n\n"
-            "Reference Home ID: BEEP-HOME-001\n"
-            "Reference Home Version: 1.0.0\n"
-            "Approval Record ID: TEST-APPROVAL-001\n"
-            "Approval Status: APPROVED\n"
-            "Approval Authority: B.E.E.P. Board of Directors\n"
-            "Board Resolution Reference: TEST-BOARD-RES-001\n"
-            "Board Decision Date: 2026-11-17\n",
-            encoding="utf-8"
-        )
-
-
-        self.generate_test_hashes()
-
-        # Create a temporary approval audit record.
-        audit_path = self.folder / "test-approval-audit.json"
-
-        audit = {
-            "audit_schema_version": "1.0.0",
-            "repository": "BEEP Software Consistency Repository",
-            "audit_status": "DEVELOPMENT",
-            "records": [
-                {
-                    "record_id": "TEST-APPROVAL-001",
-                    "reference_home_id": "BEEP-HOME-001",
-                    "reference_home_version": "1.0.0",
-                    "decision": "APPROVED",
-                    "reviewer": "Test Technical Reviewer",
-                    "approval_authority": "B.E.E.P. Board of Directors",
-                    "evidence": "TEST-EVIDENCE-001",
-                    "pull_request": "TEST-PR-001",
-                    "decision_date": "2026-11-17",
-                    "board_resolution_reference": "TEST-BOARD-RES-001",
-
-                }
-            ],
-        }
-
-        audit_path.write_text(
-            json.dumps(audit, indent=2),
             encoding="utf-8",
         )
 
-        
-        
-        errors = validate_submission(
-            self.folder,
-            production=True,
-            registry_path=registry_path,
-            approvals_directory=approvals_directory,
-            audit_path=audit_path,
+        results_path = self.folder / "results.json"
+
+        results = json.loads(
+            results_path.read_text(
+                encoding="utf-8"
+            )
         )
 
+        results["calculation_status"] = "COMPLETED"
 
-        self.assertEqual(errors, [])
-
-    def test_production_rejects_missing_approval_document(self):
-        registry_source = (
-            Path(__file__).resolve().parent.parent
-            / "test-homes"
-            / "reference-home-registry.json"
+        results_path.write_text(
+            json.dumps(results, indent=2),
+            encoding="utf-8",
         )
 
-        registry = json.loads(
-            registry_source.read_text(encoding="utf-8")
+        self.generate_test_hashes()
+
+        # Create complete isolated fictional
+        # governance evidence.
+
+        governance_directory = (
+            tempfile.TemporaryDirectory()
         )
 
-        # Set up a simulated approved reference home.
-        registry["registry_status"] = "APPROVED"
+        self.addCleanup(
+            governance_directory.cleanup
+        )
 
-        home = registry["reference_homes"][0]
-        home["status"] = "APPROVED"
+        fixture = create_governance_fixture(
+            Path(governance_directory.name)
+        )
 
-        
-        home["approval"] = {
-            "approved_by": "B.E.E.P. Board of Directors",
-            "approval_date": "2026-11-17",
-            "approval_record": "TEST-APPROVAL-001",
-            "board_resolution_reference": "TEST-BOARD-RES-001"
+        governance_inputs = {
+            "registry_path": fixture["registry_path"],
+            "approvals_directory": fixture[
+                "approvals_directory"
+            ],
+            "audit_path": fixture["audit_path"],
+            "identifier_registry_path": fixture[
+                "identifier_registry_path"
+            ],
         }
 
-        home["test_cycles"] = ["TEST-CYCLE-001"]
+        # Confirm the complete production submission
+        # passes before removing approval evidence.
 
-        registry_path = self.folder / "test-registry.json"
-
-        registry_path.write_text(
-            json.dumps(registry, indent=2),
-            encoding="utf-8"
+        baseline_errors = validate_submission(
+            self.folder,
+            production=True,
+            **governance_inputs,
         )
 
-        # Use an empty temporary approval directory.
-        approvals_directory = self.folder / "empty-approvals"
-        approvals_directory.mkdir(
-            parents=True,
-            exist_ok=True
+        self.assertEqual(
+            baseline_errors,
+            [],
         )
+
+        # Deliberately remove the Board approval document.
+
+        fixture["approval_document"].unlink()
+
+        # Validate the same production submission
+        # with missing approval documentation.
 
         errors = validate_submission(
             self.folder,
             production=True,
-            registry_path=registry_path,
-            approvals_directory=approvals_directory
+            **governance_inputs,
         )
 
         self.assertTrue(
-            any("Missing approval document" in e for e in errors),
-            f"Actual validation errors: {errors}"
+            any(
+                "Missing approval document" in e
+                for e in errors
+            ),
+            f"Actual validation errors: {errors}",
         )
+
+        self.assertTrue(
+            any(
+                e.startswith("Board authorization:")
+                for e in errors
+            ),
+            f"Actual validation errors: {errors}",
+        )
+
+        self.assertTrue(
+            any(
+                e.startswith("Approval supporting records:")
+                for e in errors
+            ),
+            f"Actual validation errors: {errors}",
+        )
+
+
+
 
 
     def test_unknown_reference_home_rejected(self):
@@ -718,70 +731,273 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             any("not uniquely registered" in e for e in errors)
         )
 
+    
     def test_production_rejects_incomplete_approval(self):
-        registry_source = (
-            Path(__file__).resolve().parent.parent
-            / "test-homes"
-            / "reference-home-registry.json"
+
+        # Prepare an otherwise valid production submission.
+
+        submission_path = self.folder / "submission.json"
+
+        submission = json.loads(
+            submission_path.read_text(
+                encoding="utf-8"
+            )
         )
 
-        registry = json.loads(
-            registry_source.read_text(encoding="utf-8")
+        submission["software"]["engine_version"] = "1.0.0"
+
+        submission_path.write_text(
+            json.dumps(submission, indent=2),
+            encoding="utf-8",
         )
 
-        # Claim the registry and home are approved.
-        registry["registry_status"] = "APPROVED"
-        registry["reference_homes"][0]["status"] = "APPROVED"
+        results_path = self.folder / "results.json"
 
-        # Deliberately provide incomplete approval data.
-        registry["reference_homes"][0]["approval"] = {
-            "approved_by": None,
-            "approval_date": None,
-            "approval_record": None
+        results = json.loads(
+            results_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        results["calculation_status"] = "COMPLETED"
+
+        results_path.write_text(
+            json.dumps(results, indent=2),
+            encoding="utf-8",
+        )
+
+        self.generate_test_hashes()
+
+        # Create complete isolated fictional
+        # governance evidence.
+
+        governance_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        self.addCleanup(
+            governance_directory.cleanup
+        )
+
+        fixture = create_governance_fixture(
+            Path(governance_directory.name)
+        )
+
+        governance_inputs = {
+            "registry_path": fixture["registry_path"],
+            "approvals_directory": fixture[
+                "approvals_directory"
+            ],
+            "audit_path": fixture["audit_path"],
+            "identifier_registry_path": fixture[
+                "identifier_registry_path"
+            ],
         }
 
-        registry["reference_homes"][0]["test_cycles"] = []
+        # Confirm the complete production submission
+        # passes before modifying approval metadata.
 
-        registry_path = self.folder / "incomplete-approval.json"
+        baseline_errors = validate_submission(
+            self.folder,
+            production=True,
+            **governance_inputs,
+        )
+
+        self.assertEqual(
+            baseline_errors,
+            [],
+        )
+
+        # Load the isolated reference home registry.
+
+        registry_path = fixture["registry_path"]
+
+        registry = json.loads(
+            registry_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        home = registry["reference_homes"][0]
+
+        # Deliberately invalidate approval metadata
+        # while retaining the claimed APPROVED status.
+
+        home["approval"]["approved_by"] = None
+        home["approval"]["approval_date"] = None
+        home["approval"]["approval_record"] = None
+
+        home["test_cycles"] = []
 
         registry_path.write_text(
             json.dumps(registry, indent=2),
-            encoding="utf-8"
+            encoding="utf-8",
         )
+
+        # Validate the same production submission
+        # against the incomplete approval metadata.
 
         errors = validate_submission(
             self.folder,
             production=True,
-            registry_path=registry_path
+            **governance_inputs,
         )
 
-        
-        self.assertTrue(
-            any("Missing approval authority" in e for e in errors),
-            f"Actual validation errors: {errors}"
+        expected_errors = (
+            "Missing approval authority",
+            "Invalid approval date",
+            "Missing approval record",
+            "No assigned test cycles",
+        )
+
+        for expected_error in expected_errors:
+
+            with self.subTest(
+                expected_error=expected_error
+            ):
+
+                self.assertTrue(
+                    any(
+                        e.startswith(
+                            "Reference approval metadata:"
+                        )
+                        and expected_error in e
+                        for e in errors
+                    ),
+                    f"Actual validation errors: {errors}",
+                )
+
+    def verify_partial_governance_inputs_rejected(
+        self,
+        supplied_paths,
+    ):
+
+        # Prepare an otherwise valid production submission.
+
+        submission_path = self.folder / "submission.json"
+
+        submission = json.loads(
+            submission_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        submission["software"]["engine_version"] = "1.0.0"
+
+        submission_path.write_text(
+            json.dumps(submission, indent=2),
+            encoding="utf-8",
+        )
+
+        results_path = self.folder / "results.json"
+
+        results = json.loads(
+            results_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        results["calculation_status"] = "COMPLETED"
+
+        results_path.write_text(
+            json.dumps(results, indent=2),
+            encoding="utf-8",
+        )
+
+        self.generate_test_hashes()
+
+        # Create complete isolated fictional
+        # governance evidence.
+
+        governance_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        self.addCleanup(
+            governance_directory.cleanup
+        )
+
+        fixture = create_governance_fixture(
+            Path(governance_directory.name)
+        )
+
+        governance_inputs = {
+            "registry_path": fixture["registry_path"],
+            "audit_path": fixture["audit_path"],
+            "identifier_registry_path": fixture[
+                "identifier_registry_path"
+            ],
+            "approvals_directory": fixture[
+                "approvals_directory"
+            ],
+        }
+
+        # Establish successful production validation
+        # using all four governance inputs.
+
+        baseline_errors = validate_submission(
+            self.folder,
+            production=True,
+            **governance_inputs,
+        )
+
+        self.assertEqual(
+            baseline_errors,
+            [],
+        )
+
+        # Test every combination containing the
+        # specified number of explicit paths.
+
+        from itertools import combinations
+
+        for selected_paths in combinations(
+            governance_inputs,
+            supplied_paths,
+        ):
+
+            with self.subTest(
+                selected_paths=selected_paths
+            ):
+
+                partial_inputs = {
+                    key: governance_inputs[key]
+                    for key in selected_paths
+                }
+
+                errors = validate_submission(
+                    self.folder,
+                    production=True,
+                    **partial_inputs,
+                )
+
+                self.assertIn(
+                    "Production governance requires either "
+                    "all four explicit governance paths "
+                    "or all authoritative repository defaults",
+                    errors,
+                )
+
+
+    def test_production_rejects_one_governance_path(self):
+
+        self.verify_partial_governance_inputs_rejected(
+            1
         )
 
 
-        
-        self.assertTrue(
-            any("Invalid approval date" in e for e in errors),
-            f"Actual validation errors: {errors}"
+    def test_production_rejects_two_governance_paths(self):
+
+        self.verify_partial_governance_inputs_rejected(
+            2
         )
 
 
-        
-        self.assertTrue(
-            any("Missing approval record" in e for e in errors),
-            f"Actual validation errors: {errors}"
+    def test_production_rejects_three_governance_paths(self):
+
+        self.verify_partial_governance_inputs_rejected(
+            3
         )
-
-
-       
-        self.assertTrue(
-            any("No assigned test cycles" in e for e in errors),
-            f"Actual validation errors: {errors}"
-        )
-
 
 
 if __name__ == "__main__":

@@ -43,3 +43,7 @@ jobs:
             -s vendor-submissions \
             -p "test_*.py" \
             -v
+
+      - name: Demonstrate production governance acceptance and rejection
+        run: |
+          python vendor-submissions/demonstrate_production_governance_failure.py

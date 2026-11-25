@@ -1,0 +1,774 @@
+import copy
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from validate_technical_review import (
+    calculate_technical_fingerprint,
+)
+
+from validate_technical_review_records import (
+    is_valid_record_value,
+    extract_review_record_fields,
+    validate_review_record_content,
+    get_review_record_path,
+    validate_technical_review_record,
+    validate_technical_review_records,
+)
+
+
+class TestTechnicalReviewRecords(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        self.addCleanup(
+            self.temp_directory.cleanup
+        )
+
+        self.root = Path(
+            self.temp_directory.name
+        )
+
+        self.approvals_directory = (
+            self.root / "approvals"
+        )
+
+        self.approvals_directory.mkdir()
+
+        self.registry_path = (
+            self.root / "registry.json"
+        )
+
+    def make_home(
+        self,
+        status="UNDER_REVIEW",
+        home_id="BEEP-HOME-TEST",
+        version="1.0.0",
+        record_id="BEEP-REV-TEST-001",
+    ):
+        home = {
+            "test_home_id": home_id,
+            "test_home_version": version,
+            "status": status,
+            "conditioned_floor_area_ft2": 2200,
+            "conditioned_volume_ft3": 19800,
+            "bedrooms": 3,
+            "reference_files": [
+                {
+                    "filename": "test-home.xml",
+                    "sha256": "a" * 64,
+                }
+            ],
+            "review": {
+                "reviewer": "Fictional Test Reviewer",
+                "review_record": record_id,
+                "review_status": "COMPLETED",
+                "review_date": "2026-11-24",
+                "review_findings":
+                    "Fictional technical findings.",
+                "review_recommendation":
+                    "RECOMMEND_APPROVAL",
+                "conflict_of_interest_disclosure":
+                    "Fictional test disclosure.",
+                "reviewed_content_sha256": None,
+            },
+        }
+
+        home["review"][
+            "reviewed_content_sha256"
+        ] = calculate_technical_fingerprint(home)
+
+        return home
+
+    def make_document(self, home):
+        review = home["review"]
+
+        fields = {
+            "Reference Home ID":
+                home["test_home_id"],
+            "Reference Home Version":
+                home["test_home_version"],
+            "Technical Review Record ID":
+                review["review_record"],
+            "Technical Reviewer":
+                review["reviewer"],
+            "Technical Review Date":
+                review["review_date"],
+            "Technical Review Status":
+                review["review_status"],
+            "Review Findings":
+                review["review_findings"],
+            "Review Recommendation":
+                review["review_recommendation"],
+            "Conflict-of-Interest Disclosure":
+                review["conflict_of_interest_disclosure"],
+            "Reviewed Content SHA-256":
+                review["reviewed_content_sha256"],
+            "Review Scope":
+                "Fictional review of building geometry.",
+            "Supporting Evidence":
+                "Fictional supporting calculations.",
+        }
+
+        lines = [
+            "# Fictional Technical Review Record",
+            "",
+        ]
+
+        for field, value in fields.items():
+            lines.append(
+                f"{field}: {value}"
+            )
+
+        return "\n".join(lines) + "\n"
+
+    def write_document(self, home, content=None):
+        path = get_review_record_path(
+            home,
+            self.approvals_directory,
+        )
+
+        path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        if content is None:
+            content = self.make_document(home)
+
+        path.write_text(
+            content,
+            encoding="utf-8",
+        )
+
+        return path
+
+    def write_registry(self, homes):
+        self.registry_path.write_text(
+            json.dumps({
+                "registry_version": "1.1.0",
+                "registry_status": "DEVELOPMENT",
+                "reference_homes": homes,
+            }),
+            encoding="utf-8",
+        )
+
+    def validate_home(self, home):
+        return validate_technical_review_record(
+            home,
+            self.approvals_directory,
+        )
+
+    def validate_registry(self):
+        return validate_technical_review_records(
+            self.registry_path,
+            self.approvals_directory,
+        )
+
+    def assert_error(self, errors, expected):
+        self.assertTrue(
+            any(
+                expected in error
+                for error in errors
+            ),
+            errors,
+        )
+
+    # Metadata value validation
+
+    def test_valid_metadata_value(self):
+        self.assertTrue(
+            is_valid_record_value(
+                "Fictional technical findings."
+            )
+        )
+
+    def test_empty_metadata_value(self):
+        self.assertFalse(
+            is_valid_record_value("")
+        )
+
+    def test_whitespace_metadata_value(self):
+        self.assertFalse(
+            is_valid_record_value("   ")
+        )
+
+    def test_non_string_metadata_value(self):
+        self.assertFalse(
+            is_valid_record_value(None)
+        )
+
+    def test_multiline_metadata_value(self):
+        self.assertFalse(
+            is_valid_record_value(
+                "First line\nSecond line"
+            )
+        )
+
+    def test_recognized_placeholders(self):
+        for value in (
+            "TBD",
+            "Pending",
+            "TODO",
+            "placeholder",
+            "YYYY-MM-DD",
+            "To Be Determined",
+        ):
+            with self.subTest(value=value):
+                self.assertFalse(
+                    is_valid_record_value(value)
+                )
+
+    def test_bracketed_placeholder(self):
+        self.assertFalse(
+            is_valid_record_value("[REQUIRED]")
+        )
+
+    # Document field extraction
+
+    def test_all_required_fields_extracted(self):
+        home = self.make_home()
+
+        fields, errors = (
+            extract_review_record_fields(
+                self.make_document(home)
+            )
+        )
+
+        self.assertEqual(errors, [])
+        self.assertEqual(len(fields), 12)
+
+    def test_missing_required_field(self):
+        home = self.make_home()
+
+        content = self.make_document(home)
+
+        content = content.replace(
+            "Review Scope: Fictional review "
+            "of building geometry.\n",
+            "",
+        )
+
+        _, errors = (
+            extract_review_record_fields(content)
+        )
+
+        self.assert_error(
+            errors,
+            "Missing required field: Review Scope",
+        )
+
+    def test_duplicate_required_field(self):
+        home = self.make_home()
+
+        content = self.make_document(home)
+
+        content += (
+            "Technical Reviewer: "
+            "Another Fictional Reviewer\n"
+        )
+
+        _, errors = (
+            extract_review_record_fields(content)
+        )
+
+        self.assert_error(
+            errors,
+            "Duplicate required field: Technical Reviewer",
+        )
+
+    def test_case_insensitive_duplicate_field(self):
+        home = self.make_home()
+
+        content = self.make_document(home)
+
+        content += (
+            "technical reviewer: "
+            "Fictional Test Reviewer\n"
+        )
+
+        _, errors = (
+            extract_review_record_fields(content)
+        )
+
+        self.assert_error(
+            errors,
+            "Duplicate required field: Technical Reviewer",
+        )
+
+    def test_empty_required_field(self):
+        home = self.make_home()
+
+        content = self.make_document(home)
+
+        content = content.replace(
+            "Review Scope: Fictional review "
+            "of building geometry.",
+            "Review Scope:",
+        )
+
+        _, errors = (
+            extract_review_record_fields(content)
+        )
+
+        self.assert_error(
+            errors,
+            "Invalid or placeholder value for Review Scope",
+        )
+
+    def test_placeholder_required_field(self):
+        home = self.make_home()
+
+        content = self.make_document(home)
+
+        content = content.replace(
+            "Supporting Evidence: "
+            "Fictional supporting calculations.",
+            "Supporting Evidence: [REQUIRED]",
+        )
+
+        _, errors = (
+            extract_review_record_fields(content)
+        )
+
+        self.assert_error(
+            errors,
+            "Invalid or placeholder value "
+            "for Supporting Evidence",
+        )
+
+    def test_non_text_document_rejected(self):
+        _, errors = (
+            extract_review_record_fields(None)
+        )
+
+        self.assert_error(
+            errors,
+            "Technical review document must contain text",
+        )
+
+    # Registry and document consistency
+
+    def test_matching_document_content(self):
+        home = self.make_home()
+
+        self.assertEqual(
+            validate_review_record_content(
+                home,
+                self.make_document(home),
+            ),
+            [],
+        )
+
+    def test_mismatched_reference_home_id(self):
+        home = self.make_home()
+
+        content = self.make_document(home).replace(
+            "Reference Home ID: BEEP-HOME-TEST",
+            "Reference Home ID: BEEP-HOME-OTHER",
+        )
+
+        self.assert_error(
+            validate_review_record_content(
+                home,
+                content,
+            ),
+            "mismatched Reference Home ID",
+        )
+
+    def test_mismatched_reference_home_version(self):
+        home = self.make_home()
+
+        content = self.make_document(home).replace(
+            "Reference Home Version: 1.0.0",
+            "Reference Home Version: 1.0.1",
+        )
+
+        self.assert_error(
+            validate_review_record_content(
+                home,
+                content,
+            ),
+            "mismatched Reference Home Version",
+        )
+
+    def test_mismatched_review_record_id(self):
+        home = self.make_home()
+
+        content = self.make_document(home).replace(
+            "Technical Review Record ID: BEEP-REV-TEST-001",
+            "Technical Review Record ID: BEEP-REV-TEST-002",
+        )
+
+        self.assert_error(
+            validate_review_record_content(
+                home,
+                content,
+            ),
+            "mismatched Technical Review Record ID",
+        )
+
+    def test_mismatched_reviewer(self):
+        home = self.make_home()
+
+        content = self.make_document(home).replace(
+            "Technical Reviewer: Fictional Test Reviewer",
+            "Technical Reviewer: Another Reviewer",
+        )
+
+        self.assert_error(
+            validate_review_record_content(
+                home,
+                content,
+            ),
+            "mismatched Technical Reviewer",
+        )
+
+    def test_mismatched_review_date(self):
+        home = self.make_home()
+
+        content = self.make_document(home).replace(
+            "Technical Review Date: 2026-11-24",
+            "Technical Review Date: 2026-11-25",
+        )
+
+        self.assert_error(
+            validate_review_record_content(
+                home,
+                content,
+            ),
+            "mismatched Technical Review Date",
+        )
+
+    def test_mismatched_review_status(self):
+        home = self.make_home()
+
+        content = self.make_document(home).replace(
+            "Technical Review Status: COMPLETED",
+            "Technical Review Status: IN_PROGRESS",
+        )
+
+        self.assert_error(
+            validate_review_record_content(
+                home,
+                content,
+            ),
+            "mismatched Technical Review Status",
+        )
+
+    def test_mismatched_review_findings(self):
+        home = self.make_home()
+
+        content = self.make_document(home).replace(
+            "Review Findings: Fictional technical findings.",
+            "Review Findings: Different findings.",
+        )
+
+        self.assert_error(
+            validate_review_record_content(
+                home,
+                content,
+            ),
+            "mismatched Review Findings",
+        )
+
+    def test_mismatched_recommendation(self):
+        home = self.make_home()
+
+        content = self.make_document(home).replace(
+            "Review Recommendation: RECOMMEND_APPROVAL",
+            "Review Recommendation: REVISIONS_REQUIRED",
+        )
+
+        self.assert_error(
+            validate_review_record_content(
+                home,
+                content,
+            ),
+            "mismatched Review Recommendation",
+        )
+
+    def test_mismatched_conflict_disclosure(self):
+        home = self.make_home()
+
+        content = self.make_document(home).replace(
+            "Fictional test disclosure.",
+            "Different disclosure.",
+        )
+
+        self.assert_error(
+            validate_review_record_content(
+                home,
+                content,
+            ),
+            "mismatched Conflict-of-Interest Disclosure",
+        )
+
+    def test_mismatched_document_fingerprint(self):
+        home = self.make_home()
+
+        content = self.make_document(home).replace(
+            home["review"]["reviewed_content_sha256"],
+            "0" * 64,
+        )
+
+        self.assert_error(
+            validate_review_record_content(
+                home,
+                content,
+            ),
+            "mismatched Reviewed Content SHA-256",
+        )
+
+    # Document path security
+
+    def test_valid_document_path(self):
+        home = self.make_home()
+
+        expected = (
+            self.approvals_directory
+            / "BEEP-HOME-TEST"
+            / "1.0.0"
+            / "technical-reviews"
+            / "BEEP-REV-TEST-001.md"
+        )
+
+        self.assertEqual(
+            get_review_record_path(
+                home,
+                self.approvals_directory,
+            ),
+            expected,
+        )
+
+    def test_unsafe_home_identifier(self):
+        home = self.make_home(
+            home_id="../outside"
+        )
+
+        with self.assertRaises(ValueError):
+            get_review_record_path(
+                home,
+                self.approvals_directory,
+            )
+
+    def test_unsafe_version(self):
+        home = self.make_home(
+            version="../outside"
+        )
+
+        with self.assertRaises(ValueError):
+            get_review_record_path(
+                home,
+                self.approvals_directory,
+            )
+
+    def test_unsafe_review_identifier(self):
+        home = self.make_home(
+            record_id="../outside"
+        )
+
+        with self.assertRaises(ValueError):
+            get_review_record_path(
+                home,
+                self.approvals_directory,
+            )
+
+    def test_document_symbolic_link_rejected(self):
+        home = self.make_home()
+
+        path = self.write_document(home)
+
+        target = self.root / "outside.md"
+
+        target.write_text(
+            self.make_document(home),
+            encoding="utf-8",
+        )
+
+        path.unlink()
+
+        path.symlink_to(target)
+
+        self.assert_error(
+            self.validate_home(home),
+            "cannot contain symbolic links",
+        )
+
+    def test_parent_symbolic_link_rejected(self):
+        home = self.make_home()
+
+        outside = self.root / "outside"
+
+        outside.mkdir()
+
+        linked_directory = (
+            self.approvals_directory
+            / home["test_home_id"]
+        )
+
+        linked_directory.symlink_to(
+            outside,
+            target_is_directory=True,
+        )
+
+        self.assert_error(
+            self.validate_home(home),
+            "cannot contain symbolic links",
+        )
+
+    # Individual record validation
+
+    def test_completed_review_with_document(self):
+        home = self.make_home()
+
+        self.write_document(home)
+
+        self.assertEqual(
+            self.validate_home(home),
+            [],
+        )
+
+    def test_completed_review_without_document(self):
+        home = self.make_home()
+
+        self.assert_error(
+            self.validate_home(home),
+            "Missing technical review document",
+        )
+
+    def test_approved_home_with_document(self):
+        home = self.make_home(
+            status="APPROVED"
+        )
+
+        self.write_document(home)
+
+        self.assertEqual(
+            self.validate_home(home),
+            [],
+        )
+
+    def test_retired_home_without_document(self):
+        home = self.make_home(
+            status="RETIRED"
+        )
+
+        self.assert_error(
+            self.validate_home(home),
+            "Missing technical review document",
+        )
+
+    def test_changed_technical_content_rejected(self):
+        home = self.make_home()
+
+        self.write_document(home)
+
+        home["bedrooms"] = 4
+
+        self.assert_error(
+            self.validate_home(home),
+            "does not match the completed review",
+        )
+
+    def test_development_without_document(self):
+        home = self.make_home(
+            status="DEVELOPMENT"
+        )
+
+        for field in home["review"]:
+            home["review"][field] = None
+
+        home["review"]["review_status"] = (
+            "NOT_STARTED"
+        )
+
+        self.assertEqual(
+            self.validate_home(home),
+            [],
+        )
+
+    def test_in_progress_without_document(self):
+        home = self.make_home()
+
+        home["review"]["review_status"] = (
+            "IN_PROGRESS"
+        )
+
+        for field in (
+            "review_date",
+            "review_findings",
+            "review_recommendation",
+            "reviewed_content_sha256",
+        ):
+            home["review"][field] = None
+
+        self.assertEqual(
+            self.validate_home(home),
+            [],
+        )
+
+    # Registry-wide validation
+
+    def test_multiple_versions_require_own_documents(self):
+        first = self.make_home(
+            version="1.0.0",
+            status="RETIRED",
+        )
+
+        second = self.make_home(
+            version="1.0.1",
+            record_id="BEEP-REV-TEST-002",
+        )
+
+        self.write_document(first)
+
+        self.write_registry([
+            first,
+            second,
+        ])
+
+        self.assert_error(
+            self.validate_registry(),
+            "BEEP-HOME-TEST/1.0.1: "
+            "Missing technical review document",
+        )
+
+        self.write_document(second)
+
+        self.assertEqual(
+            self.validate_registry(),
+            [],
+        )
+
+    def test_registry_validation_preserves_input(self):
+        home = self.make_home()
+
+        original = copy.deepcopy(home)
+
+        self.write_document(home)
+        self.write_registry([home])
+
+        original_bytes = (
+            self.registry_path.read_bytes()
+        )
+
+        self.assertEqual(
+            self.validate_registry(),
+            [],
+        )
+
+        self.assertEqual(home, original)
+
+        self.assertEqual(
+            self.registry_path.read_bytes(),
+            original_bytes,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

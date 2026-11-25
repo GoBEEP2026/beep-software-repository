@@ -1,0 +1,597 @@
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+from validate_technical_review_record_history import (
+    is_technical_review_record_path,
+    load_historical_review_records,
+    validate_preserved_review_records,
+    validate_technical_review_record_history,
+)
+
+
+class TestTechnicalReviewRecordHistory(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        self.addCleanup(
+            self.temp_directory.cleanup
+        )
+
+        self.root = Path(
+            self.temp_directory.name
+        ).resolve()
+
+        self.record_path = (
+            "approvals/BEEP-HOME-TEST/1.0.0/"
+            "technical-reviews/BEEP-REV-TEST-001.md"
+        )
+
+        self.second_record_path = (
+            "approvals/BEEP-HOME-TEST/1.0.0/"
+            "technical-reviews/BEEP-REV-TEST-002.md"
+        )
+
+        self.content = (
+            b"# Fictional Technical Review\n"
+            b"Fictional historical test content.\n"
+        )
+
+    def write_record(self, path=None, content=None):
+        if path is None:
+            path = self.record_path
+
+        if content is None:
+            content = self.content
+
+        destination = self.root / path
+
+        destination.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        destination.write_bytes(content)
+
+        return destination
+
+    def git(self, *arguments):
+        result = subprocess.run(
+            ["git", *arguments],
+            cwd=self.root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+
+        return result.stdout
+
+    def initialize_git(self):
+        self.git("init", "-q")
+        self.git(
+            "config",
+            "user.name",
+            "Fictional Test User",
+        )
+        self.git(
+            "config",
+            "user.email",
+            "test@example.invalid",
+        )
+        self.git(
+            "config",
+            "commit.gpgsign",
+            "false",
+        )
+        self.git(
+            "config",
+            "core.autocrlf",
+            "false",
+        )
+
+    def commit_repository(self):
+        self.git("add", "-A")
+
+        self.git(
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "Fictional test commit",
+        )
+
+        return self.git(
+            "rev-parse", "HEAD"
+        ).decode("ascii").strip()
+
+    def previous_records(self):
+        return {
+            self.record_path: self.content
+        }
+
+    def validate(self, previous=None):
+        if previous is None:
+            previous = self.previous_records()
+
+        return validate_preserved_review_records(
+            previous,
+            self.root,
+        )
+
+    def assert_error(self, errors, expected):
+        self.assertTrue(
+            any(
+                expected in error
+                for error in errors
+            ),
+            errors,
+        )
+
+    # Record path identification
+
+    def test_valid_record_path(self):
+        self.assertTrue(
+            is_technical_review_record_path(
+                self.record_path
+            )
+        )
+
+    def test_non_string_path(self):
+        self.assertFalse(
+            is_technical_review_record_path(None)
+        )
+
+    def test_wrong_top_level_directory(self):
+        self.assertFalse(
+            is_technical_review_record_path(
+                self.record_path.replace(
+                    "approvals/", "docs/"
+                )
+            )
+        )
+
+    def test_wrong_record_category(self):
+        self.assertFalse(
+            is_technical_review_record_path(
+                self.record_path.replace(
+                    "technical-reviews/",
+                    "other-records/",
+                )
+            )
+        )
+
+    def test_wrong_file_extension(self):
+        self.assertFalse(
+            is_technical_review_record_path(
+                self.record_path.replace(
+                    ".md", ".txt"
+                )
+            )
+        )
+
+    def test_invalid_home_identifier(self):
+        self.assertFalse(
+            is_technical_review_record_path(
+                self.record_path.replace(
+                    "BEEP-HOME-TEST", ".."
+                )
+            )
+        )
+
+    def test_invalid_version(self):
+        self.assertFalse(
+            is_technical_review_record_path(
+                self.record_path.replace(
+                    "1.0.0", "01.0.0"
+                )
+            )
+        )
+
+    def test_invalid_record_identifier(self):
+        self.assertFalse(
+            is_technical_review_record_path(
+                self.record_path.replace(
+                    "BEEP-REV-TEST-001",
+                    "invalid record",
+                )
+            )
+        )
+
+    def test_extra_directory_rejected(self):
+        self.assertFalse(
+            is_technical_review_record_path(
+                self.record_path.replace(
+                    "technical-reviews/",
+                    "technical-reviews/extra/",
+                )
+            )
+        )
+
+    def test_approval_document_excluded(self):
+        self.assertFalse(
+            is_technical_review_record_path(
+                "approvals/BEEP-HOME-TEST/"
+                "1.0.0/approval-record.md"
+            )
+        )
+
+    # Historical document preservation
+
+    def test_empty_historical_records(self):
+        self.assertEqual(
+            self.validate({}),
+            [],
+        )
+
+    def test_unchanged_document(self):
+        self.write_record()
+
+        self.assertEqual(
+            self.validate(),
+            [],
+        )
+
+    def test_modified_document(self):
+        self.write_record(
+            content=b"Modified content."
+        )
+
+        self.assert_error(
+            self.validate(),
+            "cannot be modified",
+        )
+
+    def test_whitespace_change_rejected(self):
+        self.write_record(
+            content=self.content + b"\n"
+        )
+
+        self.assert_error(
+            self.validate(),
+            "cannot be modified",
+        )
+
+    def test_deleted_document(self):
+        path = self.write_record()
+
+        path.unlink()
+
+        self.assert_error(
+            self.validate(),
+            "cannot be deleted or renamed",
+        )
+
+    def test_renamed_document(self):
+        path = self.write_record()
+
+        path.rename(
+            path.with_name("RENAMED.md")
+        )
+
+        self.assert_error(
+            self.validate(),
+            "cannot be deleted or renamed",
+        )
+
+    def test_new_document_permitted(self):
+        self.write_record()
+
+        self.write_record(
+            path=self.second_record_path
+        )
+
+        self.assertEqual(
+            self.validate(),
+            [],
+        )
+
+    def test_multiple_preserved_documents(self):
+        self.write_record()
+
+        self.write_record(
+            path=self.second_record_path
+        )
+
+        previous = {
+            self.record_path: self.content,
+            self.second_record_path: self.content,
+        }
+
+        self.assertEqual(
+            self.validate(previous),
+            [],
+        )
+
+    def test_multiple_document_failures(self):
+        self.write_record(
+            content=b"Modified content."
+        )
+
+        previous = {
+            self.record_path: self.content,
+            self.second_record_path: self.content,
+        }
+
+        errors = self.validate(previous)
+
+        self.assertEqual(len(errors), 2)
+
+        self.assert_error(
+            errors,
+            "cannot be modified",
+        )
+
+        self.assert_error(
+            errors,
+            "cannot be deleted or renamed",
+        )
+
+    def test_directory_replacing_document(self):
+        path = self.write_record()
+
+        path.unlink()
+        path.mkdir()
+
+        self.assert_error(
+            self.validate(),
+            "cannot be deleted or renamed",
+        )
+
+    def test_invalid_historical_dictionary(self):
+        self.assert_error(
+            self.validate([]),
+            "must be a dictionary",
+        )
+
+    def test_invalid_historical_path(self):
+        self.assert_error(
+            self.validate({
+                "../outside.md": self.content
+            }),
+            "Invalid historical technical review",
+        )
+
+    def test_invalid_historical_content(self):
+        self.assert_error(
+            self.validate({
+                self.record_path: "Not bytes"
+            }),
+            "Invalid historical document content",
+        )
+
+    # Symbolic link protection
+
+    def test_document_symbolic_link(self):
+        path = self.write_record()
+
+        target = self.root / "target.md"
+
+        target.write_bytes(self.content)
+
+        path.unlink()
+        path.symlink_to(target)
+
+        self.assert_error(
+            self.validate(),
+            "cannot contain symbolic links",
+        )
+
+    def test_broken_document_symbolic_link(self):
+        path = self.write_record()
+
+        path.unlink()
+
+        path.symlink_to(
+            self.root / "missing.md"
+        )
+
+        self.assert_error(
+            self.validate(),
+            "cannot contain symbolic links",
+        )
+
+    def test_parent_directory_symbolic_link(self):
+        path = self.write_record()
+
+        original_directory = path.parent
+
+        target = self.root / "moved-reviews"
+
+        original_directory.rename(target)
+
+        original_directory.symlink_to(
+            target,
+            target_is_directory=True,
+        )
+
+        self.assert_error(
+            self.validate(),
+            "cannot contain symbolic links",
+        )
+
+    def test_approvals_directory_symbolic_link(self):
+        self.write_record()
+
+        approvals = self.root / "approvals"
+
+        target = self.root / "moved-approvals"
+
+        approvals.rename(target)
+
+        approvals.symlink_to(
+            target,
+            target_is_directory=True,
+        )
+
+        self.assert_error(
+            self.validate(),
+            "cannot contain symbolic links",
+        )
+
+    # Actual Git history retrieval
+
+    def test_load_empty_git_history(self):
+        self.initialize_git()
+
+        base_commit = self.commit_repository()
+
+        records = load_historical_review_records(
+            self.root,
+            base_commit,
+        )
+
+        self.assertEqual(records, {})
+
+    def test_load_historical_document(self):
+        self.initialize_git()
+
+        self.write_record()
+
+        base_commit = self.commit_repository()
+
+        records = load_historical_review_records(
+            self.root,
+            base_commit,
+        )
+
+        self.assertEqual(
+            records,
+            self.previous_records(),
+        )
+
+    def test_unrelated_documents_excluded(self):
+        self.initialize_git()
+
+        self.write_record()
+
+        self.write_record(
+            path=(
+                "approvals/BEEP-HOME-TEST/"
+                "1.0.0/approval-record.md"
+            )
+        )
+
+        base_commit = self.commit_repository()
+
+        records = load_historical_review_records(
+            self.root,
+            base_commit,
+        )
+
+        self.assertEqual(
+            records,
+            self.previous_records(),
+        )
+
+    def test_invalid_commit_identifier(self):
+        self.initialize_git()
+
+        with self.assertRaises(ValueError):
+            load_historical_review_records(
+                self.root,
+                "invalid-commit",
+            )
+
+    def test_unavailable_commit(self):
+        self.initialize_git()
+
+        self.commit_repository()
+
+        errors = (
+            validate_technical_review_record_history(
+                "0" * 40,
+                self.root,
+            )
+        )
+
+        self.assert_error(
+            errors,
+            "Unable to load historical",
+        )
+
+    def test_historical_symbolic_link_rejected(self):
+        self.initialize_git()
+
+        path = self.write_record()
+
+        target = self.root / "target.md"
+
+        target.write_bytes(self.content)
+
+        path.unlink()
+        path.symlink_to(target)
+
+        base_commit = self.commit_repository()
+
+        with self.assertRaises(ValueError):
+            load_historical_review_records(
+                self.root,
+                base_commit,
+            )
+
+    # Integrated historical validation
+
+    def test_integrated_unchanged_history(self):
+        self.initialize_git()
+
+        self.write_record()
+
+        base_commit = self.commit_repository()
+
+        self.assertEqual(
+            validate_technical_review_record_history(
+                base_commit,
+                self.root,
+            ),
+            [],
+        )
+
+    def test_integrated_modified_history(self):
+        self.initialize_git()
+
+        self.write_record()
+
+        base_commit = self.commit_repository()
+
+        self.write_record(
+            content=b"Modified historical record."
+        )
+
+        self.commit_repository()
+
+        self.assert_error(
+            validate_technical_review_record_history(
+                base_commit,
+                self.root,
+            ),
+            "cannot be modified",
+        )
+
+    def test_integrated_new_document(self):
+        self.initialize_git()
+
+        self.write_record()
+
+        base_commit = self.commit_repository()
+
+        self.write_record(
+            path=self.second_record_path
+        )
+
+        self.commit_repository()
+
+        self.assertEqual(
+            validate_technical_review_record_history(
+                base_commit,
+                self.root,
+            ),
+            [],
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

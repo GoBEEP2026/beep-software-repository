@@ -1,0 +1,17 @@
+{
+  "registry_schema_version": "1.0.0",
+  "registry_status": "DEVELOPMENT",
+  "registry_name": "B.E.E.P. Technical Review Identifier Reservation Registry",
+  "governance_authority": "B.E.E.P. Board of Directors",
+  "reservation_policy": {
+    "uniqueness_scope": "REPOSITORY_WIDE",
+    "reservation_trigger": "REVIEW_ASSIGNMENT",
+    "reservation_duration": "PERMANENT",
+    "identifier_reuse_allowed": false,
+    "identifier_reassignment_allowed": false,
+    "historical_modification_allowed": false,
+    "historical_deletion_allowed": false,
+    "append_only": true
+  },
+  "reservations": []
+}

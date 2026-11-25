@@ -1,0 +1,1527 @@
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+
+
+
+from validate_reference_versioning import (
+    is_valid_version,
+    parse_version,
+    get_version_change_type,
+    validate_parent_versions,
+    validate_linear_version_history,
+    validate_historical_versions,
+    validate_change_documentation,
+    validate_reference_versioning,
+    validate_historical_registries,
+)
+
+
+
+
+class TestReferenceVersioning(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.registry_path = (
+            Path(self.temp_dir.name) / "registry.json"
+        )
+
+    def write_registry(self, registry):
+        self.registry_path.write_text(
+            json.dumps(registry),
+            encoding="utf-8",
+        )
+
+    def test_valid_semantic_versions(self):
+        versions = [
+            "1.0.0",
+            "1.1.0",
+            "1.0.1",
+            "2.0.0",
+            "10.12.3",
+            "0.0.0",
+        ]
+
+        for version in versions:
+            with self.subTest(version=version):
+                self.assertTrue(is_valid_version(version))
+
+    def test_invalid_semantic_versions(self):
+        versions = [
+            "1",
+            "1.0",
+            "1.0.0.0",
+            "v1.0.0",
+            "01.0.0",
+            "1.01.0",
+            "1.0.01",
+            "1.0.0-beta",
+            "1.0.0+build",
+            "-1.0.0",
+            "1.0.-1",
+            " 1.0.0",
+            "1.0.0 ",
+            "",
+            None,
+            100,
+            [],
+            {},
+        ]
+
+        for version in versions:
+            with self.subTest(version=version):
+                self.assertFalse(is_valid_version(version))
+
+    def test_valid_registry_accepted(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                }
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_invalid_registry_version_rejected(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0",
+                }
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Invalid semantic version" in error
+                for error in errors
+            )
+        )
+
+    def test_missing_version_rejected(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                }
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Invalid semantic version" in error
+                for error in errors
+            )
+        )
+
+    def test_malformed_registry_rejected(self):
+        for registry in (
+            [],
+            {},
+            {"reference_homes": None},
+            {"reference_homes": [None]},
+        ):
+            with self.subTest(registry=registry):
+                self.write_registry(registry)
+
+                errors = validate_reference_versioning(
+                    self.registry_path
+                )
+
+                self.assertTrue(errors)
+
+    def test_missing_registry_file_rejected(self):
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Unable to read reference registry" in error
+                for error in errors
+            )
+        )
+
+    def test_invalid_json_rejected(self):
+        self.registry_path.write_text(
+            "{invalid json",
+            encoding="utf-8",
+        )
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Unable to read reference registry" in error
+                for error in errors
+            )
+        )
+
+    def test_parse_semantic_version(self):
+        self.assertEqual(
+            parse_version("1.2.3"),
+            (1, 2, 3),
+        )
+
+    def test_parse_invalid_version_rejected(self):
+        with self.assertRaises(ValueError):
+            parse_version("1.0")
+
+    def test_major_version_progression(self):
+        self.assertEqual(
+            get_version_change_type("1.2.3", "2.0.0"),
+            "MAJOR",
+        )
+
+    def test_minor_version_progression(self):
+        self.assertEqual(
+            get_version_change_type("1.2.3", "1.3.0"),
+            "MINOR",
+        )
+
+    def test_patch_version_progression(self):
+        self.assertEqual(
+            get_version_change_type("1.2.3", "1.2.4"),
+            "PATCH",
+        )
+
+    def test_invalid_version_progression_rejected(self):
+        invalid_transitions = [
+            ("1.0.0", "3.0.0"),
+            ("1.0.0", "1.2.0"),
+            ("1.0.0", "1.0.5"),
+            ("1.0.0", "1.0.0"),
+            ("2.0.0", "1.0.0"),
+            ("1.2.3", "2.2.3"),
+            ("1.2.3", "1.3.3"),
+            ("1.0", "2.0.0"),
+            ("1.0.0", "2.0"),
+            (None, "1.0.0"),
+            ("1.0.0", None),
+        ]
+
+        for parent, proposed in invalid_transitions:
+            with self.subTest(
+                parent=parent,
+                proposed=proposed,
+            ):
+                self.assertIsNone(
+                    get_version_change_type(
+                        parent,
+                        proposed,
+                    )
+                )
+
+
+    def test_initial_version_accepted(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                }
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_missing_initial_version_rejected(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "2.0.0",
+                }
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Initial reference home version must be 1.0.0"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_zero_initial_version_rejected(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "0.0.0",
+                }
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Initial reference home version must be 1.0.0"
+                in error
+                for error in errors
+            )
+        )
+
+    
+    
+    def test_multiple_versions_with_initial_accepted(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": version,
+                    "parent_version": parent,
+                }
+                for version, parent in (
+                    ("1.0.0", None),
+                    ("1.0.1", "1.0.0"),
+                    ("1.1.0", "1.0.1"),
+                    ("2.0.0", "1.1.0"),
+                )
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertEqual(errors, [])
+
+
+
+
+
+    def test_initial_version_required_for_each_home(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-001",
+                    "test_home_version": "1.0.0",
+                },
+                {
+                    "test_home_id": "BEEP-HOME-002",
+                    "test_home_version": "1.1.0",
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "BEEP-HOME-002: Initial reference home "
+                "version must be 1.0.0" in error
+                for error in errors
+            )
+        )
+
+    def test_invalid_reference_home_id_rejected(self):
+        for home_id in (None, "", " ", 123, [], {}):
+            with self.subTest(home_id=home_id):
+                self.write_registry({
+                    "reference_homes": [
+                        {
+                            "test_home_id": home_id,
+                            "test_home_version": "1.0.0",
+                        }
+                    ]
+                })
+
+                errors = validate_reference_versioning(
+                    self.registry_path
+                )
+
+                self.assertTrue(
+                    any(
+                        "missing or invalid ID" in error
+                        for error in errors
+                    )
+                )
+
+
+
+    def test_initial_version_without_parent_accepted(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            }
+        ]
+
+        self.assertEqual(validate_parent_versions(homes), [])
+
+    def test_initial_version_with_parent_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": "0.0.0",
+            }
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Initial version must not have a parent version"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_valid_parent_version_chain_accepted(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": version,
+                "parent_version": parent,
+            }
+            for version, parent in (
+                ("1.0.0", None),
+                ("1.0.1", "1.0.0"),
+                ("1.1.0", "1.0.1"),
+                ("2.0.0", "1.1.0"),
+            )
+        ]
+
+        self.assertEqual(validate_parent_versions(homes), [])
+
+    def test_missing_parent_version_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.1",
+            },
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Missing or invalid parent version" in error
+                for error in errors
+            )
+        )
+
+    def test_nonexistent_parent_version_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.2",
+                "parent_version": "1.0.1",
+            },
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Parent version 1.0.1 does not exist" in error
+                for error in errors
+            )
+        )
+
+    def test_invalid_parent_progression_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "3.0.0",
+                "parent_version": "1.0.0",
+            },
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Invalid version progression from parent"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_parent_from_different_home_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-001",
+                "test_home_version": "1.0.0",
+            },
+            {
+                "test_home_id": "BEEP-HOME-002",
+                "test_home_version": "1.0.1",
+                "parent_version": "1.0.0",
+            },
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Parent version 1.0.0 does not exist"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_self_referencing_parent_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.1",
+                "parent_version": "1.0.1",
+            },
+        ]
+
+        errors = validate_parent_versions(homes)
+
+        self.assertTrue(
+            any(
+                "Invalid version progression from parent"
+                in error
+                for error in errors
+            )
+        )
+
+
+
+    def test_registry_rejects_missing_parent(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                },
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.1",
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Missing or invalid parent version" in error
+                for error in errors
+            )
+        )
+
+    def test_registry_rejects_skipped_version(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                },
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "3.0.0",
+                    "parent_version": "1.0.0",
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Invalid version progression from parent"
+                in error
+                for error in errors
+            )
+        )
+
+
+
+    def test_registry_rejects_missing_parent(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                },
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.1",
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Missing or invalid parent version" in error
+                for error in errors
+            )
+        )
+
+    def test_registry_rejects_skipped_version(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                },
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "3.0.0",
+                    "parent_version": "1.0.0",
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Invalid version progression from parent"
+                in error
+                for error in errors
+            )
+        )
+
+
+
+    def test_valid_linear_version_history(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": version,
+                "parent_version": parent,
+            }
+            for version, parent in (
+                ("1.0.0", None),
+                ("1.0.1", "1.0.0"),
+                ("1.1.0", "1.0.1"),
+                ("2.0.0", "1.1.0"),
+            )
+        ]
+
+        self.assertEqual(
+            validate_linear_version_history(homes),
+            [],
+        )
+
+    def test_branching_version_history_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": version,
+                "parent_version": parent,
+            }
+            for version, parent in (
+                ("1.0.0", None),
+                ("1.0.1", "1.0.0"),
+                ("1.1.0", "1.0.0"),
+            )
+        ]
+
+        errors = validate_linear_version_history(homes)
+
+        self.assertTrue(
+            any(
+                "Parent must be the immediate predecessor"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_duplicate_version_history_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            },
+        ]
+
+        errors = validate_linear_version_history(homes)
+
+        self.assertTrue(
+            any(
+                "Duplicate reference home version" in error
+                for error in errors
+            )
+        )
+
+    def test_linear_history_skipped_version_rejected(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.3",
+                "parent_version": "1.0.0",
+            },
+        ]
+
+        errors = validate_linear_version_history(homes)
+
+        self.assertTrue(
+            any(
+                "Invalid sequential version increment"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_numeric_version_ordering(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": f"1.{minor}.0",
+                "parent_version": (
+                    None if minor == 0
+                    else f"1.{minor - 1}.0"
+                ),
+            }
+            for minor in reversed(range(11))
+        ]
+
+        self.assertEqual(
+            validate_linear_version_history(homes),
+            [],
+        )
+
+    def test_independent_home_version_histories(self):
+        homes = [
+            {
+                "test_home_id": home_id,
+                "test_home_version": version,
+                "parent_version": parent,
+            }
+            for home_id in (
+                "BEEP-HOME-001",
+                "BEEP-HOME-002",
+            )
+            for version, parent in (
+                ("1.0.0", None),
+                ("1.0.1", "1.0.0"),
+            )
+        ]
+
+        self.assertEqual(
+            validate_linear_version_history(homes),
+            [],
+        )
+
+
+
+    def test_registry_rejects_duplicate_versions(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                    "parent_version": None,
+                },
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                    "parent_version": None,
+                },
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Duplicate reference home version" in error
+                for error in errors
+            )
+        )
+
+    def test_registry_rejects_branching_history(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": version,
+                    "parent_version": parent,
+                }
+                for version, parent in (
+                    ("1.0.0", None),
+                    ("1.0.1", "1.0.0"),
+                    ("1.1.0", "1.0.0"),
+                )
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Parent must be the immediate predecessor"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_registry_rejects_nonsequential_history(self):
+        self.write_registry({
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": version,
+                    "parent_version": parent,
+                }
+                for version, parent in (
+                    ("1.0.0", None),
+                    ("1.0.1", "1.0.0"),
+                    ("1.0.3", "1.0.1"),
+                )
+            ]
+        })
+
+        errors = validate_reference_versioning(
+            self.registry_path
+        )
+
+        self.assertTrue(
+            any(
+                "Invalid sequential version increment"
+                in error
+                for error in errors
+            )
+        )
+
+
+
+    def test_unchanged_historical_versions_accepted(self):
+        homes = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            }
+        ]
+
+        self.assertEqual(
+            validate_historical_versions(homes, homes),
+            [],
+        )
+
+    def test_new_historical_version_accepted(self):
+        previous = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            }
+        ]
+
+        current = previous + [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.1",
+                "parent_version": "1.0.0",
+            }
+        ]
+
+        self.assertEqual(
+            validate_historical_versions(previous, current),
+            [],
+        )
+
+    def test_historical_version_deletion_rejected(self):
+        for status in (
+            "DEVELOPMENT",
+            "UNDER_REVIEW",
+            "APPROVED",
+            "RETIRED",
+        ):
+            with self.subTest(status=status):
+                previous = [
+                    {
+                        "test_home_id": "BEEP-HOME-TEST",
+                        "test_home_version": "1.0.0",
+                        "parent_version": None,
+                        "status": status,
+                    }
+                ]
+
+                errors = validate_historical_versions(
+                    previous,
+                    [],
+                )
+
+                self.assertTrue(
+                    any(
+                        "cannot be deleted or renumbered"
+                        in error
+                        for error in errors
+                    )
+                )
+
+    def test_historical_version_renumbering_rejected(self):
+        previous = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            }
+        ]
+
+        current = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "2.0.0",
+            }
+        ]
+
+        errors = validate_historical_versions(
+            previous,
+            current,
+        )
+
+        self.assertTrue(
+            any(
+                "cannot be deleted or renumbered" in error
+                for error in errors
+            )
+        )
+
+    def test_historical_parent_change_rejected(self):
+        previous = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+                "parent_version": None,
+            },
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.1",
+                "parent_version": "1.0.0",
+            },
+        ]
+
+        current = [
+            dict(home) for home in previous
+        ]
+
+        current[1]["parent_version"] = "0.0.0"
+
+        errors = validate_historical_versions(
+            previous,
+            current,
+        )
+
+        self.assertTrue(
+            any(
+                "Historical parent version cannot be changed"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_historical_duplicate_version_rejected(self):
+        previous = [
+            {
+                "test_home_id": "BEEP-HOME-TEST",
+                "test_home_version": "1.0.0",
+            }
+        ]
+
+        current = previous + [
+            dict(previous[0])
+        ]
+
+        errors = validate_historical_versions(
+            previous,
+            current,
+        )
+
+        self.assertTrue(
+            any(
+                "Duplicate version" in error
+                for error in errors
+            )
+        )
+
+    def test_historical_home_reassignment_rejected(self):
+        previous = [
+            {
+                "test_home_id": "BEEP-HOME-001",
+                "test_home_version": "1.0.0",
+            }
+        ]
+
+        current = [
+            {
+                "test_home_id": "BEEP-HOME-002",
+                "test_home_version": "1.0.0",
+            }
+        ]
+
+        errors = validate_historical_versions(
+            previous,
+            current,
+        )
+
+        self.assertTrue(
+            any(
+                "cannot be deleted or renumbered" in error
+                for error in errors
+            )
+        )
+
+    def test_malformed_historical_registry_rejected(self):
+        malformed_inputs = [
+            None,
+            {},
+            "invalid",
+            [None],
+            [{"test_home_id": "BEEP-HOME-TEST"}],
+        ]
+
+        for malformed in malformed_inputs:
+            with self.subTest(malformed=malformed):
+                self.assertTrue(
+                    validate_historical_versions(
+                        malformed,
+                        [],
+                    )
+                )
+
+                self.assertTrue(
+                    validate_historical_versions(
+                        [],
+                        malformed,
+                    )
+                )
+
+
+
+    def test_historical_registry_comparison_accepted(self):
+        previous_path = (
+            Path(self.temp_dir.name) / "previous.json"
+        )
+
+        registry = {
+            "reference_homes": [
+                {
+                    "test_home_id": "BEEP-HOME-TEST",
+                    "test_home_version": "1.0.0",
+                    "parent_version": None,
+                }
+            ]
+        }
+
+        previous_path.write_text(
+            json.dumps(registry),
+            encoding="utf-8",
+        )
+
+        self.write_registry(registry)
+
+        self.assertEqual(
+            validate_historical_registries(
+                previous_path,
+                self.registry_path,
+            ),
+            [],
+        )
+
+    def test_historical_registry_deletion_rejected(self):
+        previous_path = (
+            Path(self.temp_dir.name) / "previous.json"
+        )
+
+        previous_path.write_text(
+            json.dumps({
+                "reference_homes": [
+                    {
+                        "test_home_id": "BEEP-HOME-TEST",
+                        "test_home_version": "1.0.0",
+                        "parent_version": None,
+                    }
+                ]
+            }),
+            encoding="utf-8",
+        )
+
+        self.write_registry({
+            "reference_homes": []
+        })
+
+        errors = validate_historical_registries(
+            previous_path,
+            self.registry_path,
+        )
+
+        self.assertTrue(
+            any(
+                "cannot be deleted or renumbered" in error
+                for error in errors
+            )
+        )
+
+    def test_missing_historical_registry_rejected(self):
+        missing_path = (
+            Path(self.temp_dir.name) / "missing.json"
+        )
+
+        self.write_registry({
+            "reference_homes": []
+        })
+
+        for previous_path, current_path in (
+            (missing_path, self.registry_path),
+            (self.registry_path, missing_path),
+        ):
+            with self.subTest(
+                previous=previous_path,
+                current=current_path,
+            ):
+                errors = validate_historical_registries(
+                    previous_path,
+                    current_path,
+                )
+
+                self.assertTrue(
+                    any(
+                        "Unable to read registry" in error
+                        for error in errors
+                    )
+                )
+
+    def test_invalid_historical_registry_json_rejected(self):
+        invalid_path = (
+            Path(self.temp_dir.name) / "invalid.json"
+        )
+
+        invalid_path.write_text(
+            "{invalid json",
+            encoding="utf-8",
+        )
+
+        self.write_registry({
+            "reference_homes": []
+        })
+
+        for previous_path, current_path in (
+            (invalid_path, self.registry_path),
+            (self.registry_path, invalid_path),
+        ):
+            with self.subTest(
+                previous=previous_path,
+                current=current_path,
+            ):
+                errors = validate_historical_registries(
+                    previous_path,
+                    current_path,
+                )
+
+                self.assertTrue(
+                    any(
+                        "Unable to read registry" in error
+                        for error in errors
+                    )
+                )
+
+    def test_invalid_historical_registry_structure(self):
+        invalid_path = (
+            Path(self.temp_dir.name) / "invalid.json"
+        )
+
+        self.write_registry({
+            "reference_homes": []
+        })
+
+        for invalid_registry in (
+            [],
+            None,
+            "invalid",
+        ):
+            with self.subTest(
+                registry=invalid_registry
+            ):
+                invalid_path.write_text(
+                    json.dumps(invalid_registry),
+                    encoding="utf-8",
+                )
+
+                for previous_path, current_path in (
+                    (invalid_path, self.registry_path),
+                    (self.registry_path, invalid_path),
+                ):
+                    errors = validate_historical_registries(
+                        previous_path,
+                        current_path,
+                    )
+
+                    self.assertTrue(
+                        any(
+                            "Registry must be a JSON object"
+                            in error
+                            for error in errors
+                        )
+                    )
+
+    def test_invalid_historical_reference_homes_array(self):
+        invalid_path = (
+            Path(self.temp_dir.name) / "invalid.json"
+        )
+
+        self.write_registry({
+            "reference_homes": []
+        })
+
+        for invalid_registry in (
+            {},
+            {"reference_homes": None},
+            {"reference_homes": {}},
+            {"reference_homes": "invalid"},
+        ):
+            with self.subTest(
+                registry=invalid_registry
+            ):
+                invalid_path.write_text(
+                    json.dumps(invalid_registry),
+                    encoding="utf-8",
+                )
+
+                for previous_path, current_path in (
+                    (invalid_path, self.registry_path),
+                    (self.registry_path, invalid_path),
+                ):
+                    errors = validate_historical_registries(
+                        previous_path,
+                        current_path,
+                    )
+
+                    self.assertTrue(
+                        any(
+                            "Missing or invalid reference_homes array"
+                            in error
+                            for error in errors
+                        )
+                    )
+
+
+
+    def make_documented_home(
+        self,
+        version="1.0.0",
+        parent=None,
+        change_type="INITIAL",
+    ):
+        return {
+            "test_home_id": "BEEP-HOME-TEST",
+            "test_home_version": version,
+            "parent_version": parent,
+            "version_history": [
+                {
+                    "version": version,
+                    "change_type": change_type,
+                    "description": "Test change description.",
+                    "change_reason": "Test change reason.",
+                    "anticipated_impact": "Test modeling impact.",
+                    "affected_components": [
+                        "Building geometry"
+                    ],
+                    "change_date": "2026-11-24",
+                }
+            ],
+        }
+
+    def test_valid_initial_change_documentation(self):
+        home = self.make_documented_home()
+
+        self.assertEqual(
+            validate_change_documentation([home]),
+            [],
+        )
+
+    def test_valid_version_change_classifications(self):
+        for parent, version, change_type in (
+            ("1.0.0", "1.0.1", "PATCH"),
+            ("1.0.1", "1.1.0", "MINOR"),
+            ("1.1.0", "2.0.0", "MAJOR"),
+        ):
+            with self.subTest(change_type=change_type):
+                home = self.make_documented_home(
+                    version,
+                    parent,
+                    change_type,
+                )
+
+                self.assertEqual(
+                    validate_change_documentation([home]),
+                    [],
+                )
+
+    def test_incorrect_change_classification_rejected(self):
+        home = self.make_documented_home(
+            "2.0.0",
+            "1.0.0",
+            "PATCH",
+        )
+
+        errors = validate_change_documentation([home])
+
+        self.assertTrue(
+            any(
+                "Change classification does not match"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_missing_version_history_rejected(self):
+        home = self.make_documented_home()
+        del home["version_history"]
+
+        errors = validate_change_documentation([home])
+
+        self.assertTrue(
+            any(
+                "Missing or invalid version history"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_malformed_version_history_rejected(self):
+        for history in (None, {}, [], [None]):
+            with self.subTest(history=history):
+                home = self.make_documented_home()
+                home["version_history"] = history
+
+                self.assertTrue(
+                    validate_change_documentation([home])
+                )
+
+    def test_missing_matching_history_entry_rejected(self):
+        home = self.make_documented_home()
+        home["version_history"][0]["version"] = "2.0.0"
+
+        errors = validate_change_documentation([home])
+
+        self.assertTrue(
+            any(
+                "Exactly one matching version"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_duplicate_matching_history_entry_rejected(self):
+        home = self.make_documented_home()
+
+        home["version_history"].append(
+            dict(home["version_history"][0])
+        )
+
+        errors = validate_change_documentation([home])
+
+        self.assertTrue(
+            any(
+                "Exactly one matching version"
+                in error
+                for error in errors
+            )
+        )
+
+    def test_required_change_text_fields(self):
+        for field in (
+            "description",
+            "change_reason",
+            "anticipated_impact",
+        ):
+            for value in (None, "", "   ", 123):
+                with self.subTest(
+                    field=field,
+                    value=value,
+                ):
+                    home = self.make_documented_home()
+                    home["version_history"][0][field] = value
+
+                    errors = validate_change_documentation(
+                        [home]
+                    )
+
+                    self.assertTrue(
+                        any(
+                            f"Missing or invalid {field}"
+                            in error
+                            for error in errors
+                        )
+                    )
+
+    def test_invalid_affected_components_rejected(self):
+        for components in (
+            None,
+            [],
+            "Building geometry",
+            [""],
+            ["   "],
+            [123],
+        ):
+            with self.subTest(components=components):
+                home = self.make_documented_home()
+
+                home["version_history"][0][
+                    "affected_components"
+                ] = components
+
+                errors = validate_change_documentation(
+                    [home]
+                )
+
+                self.assertTrue(
+                    any(
+                        "Missing or invalid affected_components"
+                        in error
+                        for error in errors
+                    )
+                )
+
+    def test_invalid_change_dates_rejected(self):
+        for change_date in (
+            None,
+            "",
+            "11/24/2026",
+            "2026-2-01",
+            "2026-13-01",
+            "2026-02-30",
+            "2025-02-29",
+        ):
+            with self.subTest(change_date=change_date):
+                home = self.make_documented_home()
+
+                home["version_history"][0][
+                    "change_date"
+                ] = change_date
+
+                errors = validate_change_documentation(
+                    [home]
+                )
+
+                self.assertTrue(
+                    any(
+                        "Invalid change_date" in error
+                        for error in errors
+                    )
+                )
+
+    def test_valid_leap_year_change_date(self):
+        home = self.make_documented_home()
+
+        home["version_history"][0][
+            "change_date"
+        ] = "2024-02-29"
+
+        self.assertEqual(
+            validate_change_documentation([home]),
+            [],
+        )
+
+    def test_legacy_initial_date_exception(self):
+        home = self.make_documented_home()
+        home["test_home_id"] = "BEEP-HOME-001"
+        home["version_history"][0]["change_date"] = None
+
+        self.assertEqual(
+            validate_change_documentation([home]),
+            [],
+        )
+
+        del home["version_history"][0]["change_date"]
+
+        self.assertTrue(
+            validate_change_documentation([home])
+        )
+
+        home = self.make_documented_home(
+            "1.0.1",
+            "1.0.0",
+            "PATCH",
+        )
+
+        home["test_home_id"] = "BEEP-HOME-001"
+        home["version_history"][0]["change_date"] = None
+
+        self.assertTrue(
+            validate_change_documentation([home])
+        )
+
+
+
+
+
+if __name__ == "__main__":
+    unittest.main()

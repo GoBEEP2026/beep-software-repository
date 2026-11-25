@@ -1,6 +1,5 @@
 name: Validate Reference Home Integrity
 
-
 on:
   push:
     branches:
@@ -11,7 +10,6 @@ on:
       - main
 
   workflow_dispatch:
-
 
 permissions:
   contents: read
@@ -25,6 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -34,65 +33,28 @@ jobs:
         run: |
           python test-homes/validate_reference_integrity.py
 
-      - name: Run reference integrity unit tests
-        run: |
-          python -m unittest discover \
-            -s test-homes \
-            -p "test_validate_reference_integrity.py" \
-            -v
-
-      - name: Run reference lifecycle unit tests
-        run: |
-          python -m unittest discover \
-            -s test-homes \
-            -p "test_validate_reference_lifecycle.py" \
-            -v
-
       - name: Validate reference home approvals
         run: |
           python test-homes/validate_reference_approval.py
-
-      - name: Run reference approval unit tests
-        run: |
-          python -m unittest discover \
-            -s test-homes \
-            -p "test_validate_reference_approval.py" \
-            -v
 
       - name: Validate reference approval records
         run: |
           python test-homes/validate_approval_records.py
 
-      - name: Run approval record unit tests
-        run: |
-          python -m unittest discover \
-            -s test-homes \
-            -p "test_validate_approval_records.py" \
-            -v
-
-      - name: Run Board authorization unit tests
-        run: |
-          python -m unittest discover \
-            -s test-homes \
-            -p "test_validate_board_authorization.py" \
-            -v
-
       - name: Validate reference approval audit log
         run: python test-homes/validate_reference_audit.py
 
-      - name: Test reference approval audit validation
-        run: |
-          python -m unittest discover \
-            -s test-homes \
-            -p "test_validate_reference_audit.py" \
-            -v
+      - name: Validate audit technical review evidence
+        run: python test-homes/validate_audit_review_evidence.py test-homes/reference-approval-audit.json approvals
 
-      - name: Test append-only audit validation
-        run: |
-          python -m unittest discover \
-            -s test-homes \
-            -p "test_validate_audit_append_only.py" \
-            -v
+      - name: Validate audit technical review reservations
+        run: python test-homes/validate_audit_review_reservations.py test-homes/reference-approval-audit.json test-homes/reference-review-identifier-registry.json
+
+      - name: Validate bidirectional approval audit consistency
+        run: python test-homes/validate_approval_audit_consistency.py test-homes/reference-home-registry.json test-homes/reference-approval-audit.json
+
+      - name: Validate bidirectional retirement audit consistency
+        run: python test-homes/validate_retirement_audit_consistency.py test-homes/reference-home-registry.json test-homes/reference-approval-audit.json
 
       - name: Verify approval audit history is append-only
         if: github.event_name == 'pull_request'
@@ -103,7 +65,6 @@ jobs:
           git show "${BASE_SHA}:test-homes/reference-approval-audit.json" > /tmp/beep-previous-approval-audit.json
           python test-homes/validate_audit_append_only.py /tmp/beep-previous-approval-audit.json
 
-      
       - name: Prepare previous reference home registry
         if: always() && github.event_name == 'pull_request'
         env:
@@ -112,8 +73,15 @@ jobs:
           git show "${BASE_SHA}:test-homes/reference-home-registry.json" > /tmp/beep-previous-reference-registry.json
           python -m json.tool /tmp/beep-previous-reference-registry.json > /dev/null
 
-      
-      
+      - name: Validate historical audit decision authorization
+        if: github.event_name == 'pull_request'
+        run: |
+          python test-homes/validate_audit_decision_history.py \
+            /tmp/beep-previous-reference-registry.json \
+            test-homes/reference-home-registry.json \
+            /tmp/beep-previous-approval-audit.json \
+            test-homes/reference-approval-audit.json
+
       - name: Validate reference home lifecycle transitions
         if: always() && github.event_name == 'pull_request'
         env:
@@ -124,3 +92,145 @@ jobs:
             test-homes/reference-home-registry.json \
             "$BASE_SHA"
 
+      - name: Validate reference home semantic versions
+        run: |
+          python test-homes/validate_reference_versioning.py test-homes/reference-home-registry.json
+
+      - name: Validate historical reference home versions
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          python test-homes/validate_reference_versioning.py --historical /tmp/beep-previous-reference-registry.json test-homes/reference-home-registry.json
+
+      - name: Validate reference home change documentation
+        if: always()
+        run: |
+          python test-homes/validate_reference_versioning.py --documentation test-homes/reference-home-registry.json
+
+      - name: Validate current technical review registry
+        run: python test-homes/validate_technical_review_registry.py test-homes/reference-home-registry.json
+
+      - name: Validate historical technical review registry
+        if: github.event_name == 'pull_request'
+        run: python test-homes/validate_technical_review_registry.py --historical /tmp/beep-previous-reference-registry.json test-homes/reference-home-registry.json
+
+      - name: Validate reference home review and approval chronology
+        run: python test-homes/validate_review_approval_chronology.py test-homes/reference-home-registry.json
+
+      - name: Validate technical review supporting documents
+        run: python test-homes/validate_technical_review_records.py test-homes/reference-home-registry.json
+        
+      - name: Validate historical technical review document preservation
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python test-homes/validate_technical_review_record_history.py "$BASE_SHA"
+
+      - name: Validate technical review identifier reservation registry
+        run: |
+          python test-homes/validate_review_identifiers.py test-homes/reference-review-identifier-registry.json
+          
+      - name: Validate historical technical review identifier reservations
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python test-homes/validate_review_identifier_history.py "$BASE_SHA"
+          
+      - name: Validate cross-registry technical review assignment consistency
+        run: |
+          python test-homes/validate_review_assignment_consistency.py test-homes/reference-home-registry.json test-homes/reference-review-identifier-registry.json
+          
+      - name: Validate historical technical review assignment consistency
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python test-homes/validate_review_assignment_history.py "$BASE_SHA"
+
+      - name: Validate technical review document reservations
+        run: |
+          python test-homes/validate_review_document_reservations.py test-homes/reference-review-identifier-registry.json approvals
+
+      - name: Validate historical technical review document creation authorization
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python test-homes/validate_review_document_creation.py "$BASE_SHA"
+
+      - name: Demonstrate controlled technical review document creation failure
+        run: |
+          python test-homes/demonstrate_review_document_creation_failure.py
+
+      - name: Demonstrate controlled historical audit authorization failure
+        run: 
+          python test-homes/demonstrate_audit_decision_history_failure.py
+
+      - name: Enforce all required repository unit test counts
+        run: |
+          set -e
+
+          python test-homes/run_required_unit_tests.py test_run_required_unit_tests.py 20
+
+          python test-homes/run_required_unit_tests.py test_validate_approval_audit_consistency.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_approval_records.py 7
+
+          python test-homes/run_required_unit_tests.py test_validate_audit_append_only.py 5
+
+          python test-homes/run_required_unit_tests.py test_validate_audit_decision_history.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_audit_history.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_audit_review_evidence.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_audit_review_reservations.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_audit_schema.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_board_authorization.py 8
+
+          python test-homes/run_required_unit_tests.py test_validate_live_audit_schema.py 30
+
+          python test-homes/run_required_unit_tests.py test_validate_reference_approval.py 13
+
+          python test-homes/run_required_unit_tests.py test_validate_reference_audit.py 8
+
+          python test-homes/run_required_unit_tests.py test_validate_reference_integrity.py 5
+
+          python test-homes/run_required_unit_tests.py test_validate_reference_lifecycle.py 20
+
+          python test-homes/run_required_unit_tests.py test_validate_reference_versioning.py 65
+
+          python test-homes/run_required_unit_tests.py test_validate_retirement_audit_consistency.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_review_approval_chronology.py 30
+
+          python test-homes/run_required_unit_tests.py test_validate_review_assignment_consistency.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_review_assignment_history.py 40
+          
+          python test-homes/run_required_unit_tests.py test_validate_review_document_creation.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_review_document_reservations.py 40
+          
+          python test-homes/run_required_unit_tests.py test_validate_review_identifier_history.py 36
+
+          python test-homes/run_required_unit_tests.py test_validate_review_identifiers.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_technical_review.py 95
+
+          python test-homes/run_required_unit_tests.py test_validate_technical_review_history.py 32
+
+          python test-homes/run_required_unit_tests.py test_validate_technical_review_record_history.py 36
+
+          python test-homes/run_required_unit_tests.py test_validate_technical_review_records.py 40
+
+          python test-homes/run_required_unit_tests.py test_validate_technical_review_registry.py 24
+
+          echo "========================================"
+          echo "ALL REQUIRED REPOSITORY UNIT TESTS PASSED"
+          echo "Verified test suites: 29/29"
+          echo "Verified unit tests: 954/954"
+          echo "========================================"
