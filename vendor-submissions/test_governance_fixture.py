@@ -50,6 +50,29 @@ from validate_review_identifiers import (
     validate_review_identifiers,
 )
 
+from validate_review_assignment_consistency import (
+    validate_review_assignment_consistency,
+)
+
+from validate_review_document_reservations import (
+    validate_review_document_reservations,
+)
+
+from validate_audit_review_evidence import (
+    validate_audit_review_evidence,
+)
+
+from validate_audit_review_reservations import (
+    validate_audit_review_reservations,
+)
+
+from validate_approval_audit_consistency import (
+    validate_approval_audit_consistency,
+)
+
+from validate_retirement_audit_consistency import (
+    validate_retirement_audit_consistency,
+)
 
 class TestGovernanceFixture(unittest.TestCase):
 
@@ -427,6 +450,60 @@ class TestGovernanceFixture(unittest.TestCase):
             ),
             errors,
         )
+
+    def test_review_assignment_consistency(self):
+
+        errors = validate_review_assignment_consistency(
+            self.fixture["registry_path"],
+            self.fixture["identifier_registry_path"],
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_review_document_reservations(self):
+
+        errors = validate_review_document_reservations(
+            self.fixture["identifier_registry_path"],
+            self.fixture["approvals_directory"],
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_audit_review_evidence(self):
+
+        errors = validate_audit_review_evidence(
+            self.fixture["audit_path"],
+            self.fixture["approvals_directory"],
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_audit_review_reservations(self):
+
+        errors = validate_audit_review_reservations(
+            self.fixture["audit_path"],
+            self.fixture["identifier_registry_path"],
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_approval_audit_consistency(self):
+
+        errors = validate_approval_audit_consistency(
+            self.fixture["registry_path"],
+            self.fixture["audit_path"],
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_retirement_audit_consistency(self):
+
+        errors = validate_retirement_audit_consistency(
+            self.fixture["registry_path"],
+            self.fixture["audit_path"],
+        )
+
+        self.assertEqual(errors, [])
 
 
 if __name__ == "__main__":
