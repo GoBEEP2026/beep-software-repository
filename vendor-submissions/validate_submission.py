@@ -7,6 +7,27 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 import importlib.util
 
+
+# Locate trusted repository governance validators.
+REPOSITORY_ROOT = (
+    Path(__file__).resolve().parent.parent
+)
+
+TEST_HOMES_DIRECTORY = (
+    REPOSITORY_ROOT / "test-homes"
+)
+
+if str(TEST_HOMES_DIRECTORY) not in sys.path:
+    sys.path.insert(
+        0,
+        str(TEST_HOMES_DIRECTORY),
+    )
+
+from validate_production_governance import (
+    validate_production_governance,
+)
+
+
 REQUIRED_FILES = [
     "submission.json",
     "building.xml",
