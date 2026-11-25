@@ -1,7 +1,6 @@
 import json
 import tempfile
 import unittest
-
 from pathlib import Path
 from unittest.mock import patch
 
@@ -736,6 +735,99 @@ class TestProductionGovernance(unittest.TestCase):
         self.verify_partial_governance_inputs_rejected(
             3
         )
+
+
+    def test_centralized_partial_inputs_rejected_before_file_access(
+        self,
+    ):
+
+        expected_errors = [
+            "Production governance requires either "
+            "all four explicit governance paths "
+            "or all authoritative repository defaults"
+        ]
+
+        with patch.object(
+            Path,
+            "open",
+            side_effect=AssertionError(
+                "Unexpected governance file access"
+            ),
+        ) as file_open, patch.object(
+            Path,
+            "is_file",
+            side_effect=AssertionError(
+                "Unexpected governance file inspection"
+            ),
+        ) as file_check, patch.object(
+            Path,
+            "is_dir",
+            side_effect=AssertionError(
+                "Unexpected governance directory inspection"
+            ),
+        ) as directory_check:
+
+            errors = validate_production_governance(
+                registry_path=self.registry_path,
+            )
+
+            self.assertEqual(
+                errors,
+                expected_errors,
+            )
+
+            file_open.assert_not_called()
+            file_check.assert_not_called()
+            directory_check.assert_not_called()
+
+
+    def test_vendor_partial_inputs_rejected_before_file_access(
+        self,
+    ):
+
+        from validate_submission import validate_submission
+
+        expected_errors = [
+            "Production governance requires either "
+            "all four explicit governance paths "
+            "or all authoritative repository defaults"
+        ]
+
+        with patch.object(
+            Path,
+            "open",
+            side_effect=AssertionError(
+                "Unexpected submission or governance file access"
+            ),
+        ) as file_open, patch.object(
+            Path,
+            "is_file",
+            side_effect=AssertionError(
+                "Unexpected submission or governance file inspection"
+            ),
+        ) as file_check, patch.object(
+            Path,
+            "is_dir",
+            side_effect=AssertionError(
+                "Unexpected governance directory inspection"
+            ),
+        ) as directory_check:
+
+            errors = validate_submission(
+                self.registry_path.parent,
+                production=True,
+                registry_path=self.registry_path,
+            )
+
+            self.assertEqual(
+                errors,
+                expected_errors,
+            )
+
+            file_open.assert_not_called()
+            file_check.assert_not_called()
+            directory_check.assert_not_called()
+
 
 
 
