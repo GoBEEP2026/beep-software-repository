@@ -541,58 +541,122 @@ class TestVendorSubmissionValidator(unittest.TestCase):
             any("Missing production checksum" in e for e in errors)
         )
 
+   
     def test_production_rejects_missing_approval_document(self):
-        registry_source = (
-            Path(__file__).resolve().parent.parent
-            / "test-homes"
-            / "reference-home-registry.json"
+
+        # Prepare an otherwise valid production submission.
+
+        submission_path = self.folder / "submission.json"
+
+        submission = json.loads(
+            submission_path.read_text(
+                encoding="utf-8"
+            )
         )
 
-        registry = json.loads(
-            registry_source.read_text(encoding="utf-8")
+        submission["software"]["engine_version"] = "1.0.0"
+
+        submission_path.write_text(
+            json.dumps(submission, indent=2),
+            encoding="utf-8",
         )
 
-        # Set up a simulated approved reference home.
-        registry["registry_status"] = "APPROVED"
+        results_path = self.folder / "results.json"
 
-        home = registry["reference_homes"][0]
-        home["status"] = "APPROVED"
+        results = json.loads(
+            results_path.read_text(
+                encoding="utf-8"
+            )
+        )
 
-        
-        home["approval"] = {
-            "approved_by": "B.E.E.P. Board of Directors",
-            "approval_date": "2026-11-17",
-            "approval_record": "TEST-APPROVAL-001",
-            "board_resolution_reference": "TEST-BOARD-RES-001"
+        results["calculation_status"] = "COMPLETED"
+
+        results_path.write_text(
+            json.dumps(results, indent=2),
+            encoding="utf-8",
+        )
+
+        self.generate_test_hashes()
+
+        # Create complete isolated fictional
+        # governance evidence.
+
+        governance_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        self.addCleanup(
+            governance_directory.cleanup
+        )
+
+        fixture = create_governance_fixture(
+            Path(governance_directory.name)
+        )
+
+        governance_inputs = {
+            "registry_path": fixture["registry_path"],
+            "approvals_directory": fixture[
+                "approvals_directory"
+            ],
+            "audit_path": fixture["audit_path"],
+            "identifier_registry_path": fixture[
+                "identifier_registry_path"
+            ],
         }
 
-        home["test_cycles"] = ["TEST-CYCLE-001"]
+        # Confirm the complete production submission
+        # passes before removing approval evidence.
 
-        registry_path = self.folder / "test-registry.json"
-
-        registry_path.write_text(
-            json.dumps(registry, indent=2),
-            encoding="utf-8"
+        baseline_errors = validate_submission(
+            self.folder,
+            production=True,
+            **governance_inputs,
         )
 
-        # Use an empty temporary approval directory.
-        approvals_directory = self.folder / "empty-approvals"
-        approvals_directory.mkdir(
-            parents=True,
-            exist_ok=True
+        self.assertEqual(
+            baseline_errors,
+            [],
         )
+
+        # Deliberately remove the Board approval document.
+
+        fixture["approval_document"].unlink()
+
+        # Validate the same production submission
+        # with missing approval documentation.
 
         errors = validate_submission(
             self.folder,
             production=True,
-            registry_path=registry_path,
-            approvals_directory=approvals_directory
+            **governance_inputs,
         )
 
         self.assertTrue(
-            any("Missing approval document" in e for e in errors),
-            f"Actual validation errors: {errors}"
+            any(
+                "Missing approval document" in e
+                for e in errors
+            ),
+            f"Actual validation errors: {errors}",
         )
+
+        self.assertTrue(
+            any(
+                e.startswith("Board authorization:")
+                for e in errors
+            ),
+            f"Actual validation errors: {errors}",
+        )
+
+        self.assertTrue(
+            any(
+                e.startswith("Approval supporting records:")
+                for e in errors
+            ),
+            f"Actual validation errors: {errors}",
+        )
+
+
+
 
 
     def test_unknown_reference_home_rejected(self):
