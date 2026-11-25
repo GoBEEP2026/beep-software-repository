@@ -705,7 +705,9 @@ if __name__ == "__main__":
         "compliance path validated."
     )
     
-    if "--production" in sys.argv:
+    
+    if production_mode:
+
 
         print("Validation mode: PRODUCTION")
 
