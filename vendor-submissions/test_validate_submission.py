@@ -4,6 +4,9 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from governance_test_fixture import (
+    create_governance_fixture,
+)
 
 FOLDER = Path(__file__).resolve().parent
 
@@ -443,6 +446,75 @@ class TestVendorSubmissionValidator(unittest.TestCase):
                 for e in errors)
         )
 
+
+    def test_production_accepts_complete_submission(self):
+
+        submission_path = self.folder / "submission.json"
+
+        submission = json.loads(
+            submission_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        submission["software"]["engine_version"] = "1.0.0"
+
+        submission_path.write_text(
+            json.dumps(submission, indent=2),
+            encoding="utf-8",
+        )
+
+        results_path = self.folder / "results.json"
+
+        results = json.loads(
+            results_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        results["calculation_status"] = "COMPLETED"
+
+        results_path.write_text(
+            json.dumps(results, indent=2),
+            encoding="utf-8",
+        )
+
+        # Create isolated fictional governance evidence.
+        # These records do not represent an actual
+        # technical review or Board approval.
+
+        governance_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        self.addCleanup(
+            governance_directory.cleanup
+        )
+
+        fixture = create_governance_fixture(
+            Path(governance_directory.name)
+        )
+
+        # Generate actual vendor submission checksums.
+
+        self.generate_test_hashes()
+
+        # Validate the complete production submission
+        # against the fictional governance evidence.
+
+        errors = validate_submission(
+            self.folder,
+            production=True,
+            registry_path=fixture["registry_path"],
+            approvals_directory=fixture[
+                "approvals_directory"
+            ],
+            audit_path=fixture["audit_path"],
+        )
+
+        self.assertEqual(errors, [])
+
+    
     def test_production_rejects_missing_checksum(self):
         self.generate_test_hashes()
 
@@ -463,142 +535,6 @@ class TestVendorSubmissionValidator(unittest.TestCase):
         self.assertTrue(
             any("Missing production checksum" in e for e in errors)
         )
-
-
-    def test_production_accepts_complete_submission(self):
-        submission_path = self.folder / "submission.json"
-        submission = json.loads(
-            submission_path.read_text(encoding="utf-8")
-        )
-        submission["software"]["engine_version"] = "1.0.0"
-        submission_path.write_text(
-            json.dumps(submission, indent=2),
-            encoding="utf-8"
-        )
-
-        results_path = self.folder / "results.json"
-        results = json.loads(
-            results_path.read_text(encoding="utf-8")
-        )
-        results["calculation_status"] = "COMPLETED"
-        results_path.write_text(
-            json.dumps(results, indent=2),
-            encoding="utf-8"
-        )
-
-        # Create a temporary approved reference registry.
-        registry_source = (
-            Path(__file__).resolve().parent.parent
-            / "test-homes"
-            / "reference-home-registry.json"
-        )
-
-        registry = json.loads(
-            registry_source.read_text(encoding="utf-8")
-        )
-
-        registry["registry_status"] = "APPROVED"
-        registry["reference_homes"][0]["status"] = "APPROVED"
-
-       
-        registry["reference_homes"][0]["approval"] = {
-            "approved_by": "B.E.E.P. Board of Directors",
-            "approval_date": "2026-11-17",
-            "approval_record": "TEST-APPROVAL-001",
-            "board_resolution_reference": "TEST-BOARD-RES-001"
-        }
-
-
-        registry["reference_homes"][0]["test_cycles"] = [
-            "TEST-CYCLE-001"
-        ]
-
-        registry_path = self.folder / "test-registry.json"
-        registry_path.write_text(
-            json.dumps(registry, indent=2),
-            encoding="utf-8"
-        )
-
-        # Create a temporary approval document for this test.
-        approvals_directory = self.folder / "approvals"
-
-        approval_path = (
-            approvals_directory
-            / "BEEP-HOME-001"
-            / "1.0.0"
-            / "approval-record.md"
-        )
-
-        approval_path.parent.mkdir(
-            parents=True,
-            exist_ok=True
-        )
-
-       
-        approval_path.write_text(
-            "# B.E.E.P. Test Approval Record\n\n"
-            "Reference Home ID: BEEP-HOME-001\n"
-            "Reference Home Version: 1.0.0\n"
-            "Approval Record ID: TEST-APPROVAL-001\n"
-            "Approval Status: APPROVED\n"
-            "Approval Authority: B.E.E.P. Board of Directors\n"
-            "Board Resolution Reference: TEST-BOARD-RES-001\n"
-            "Board Decision Date: 2026-11-17\n",
-            encoding="utf-8"
-        )
-
-
-        self.generate_test_hashes()
-
-               # Create a fictional approval audit record for testing.
-        # This fixture does not represent an actual Board decision.
-        audit_path = self.folder / "test-approval-audit.json"
-
-        audit = {
-            "audit_schema_version": "1.1.0",
-            "repository": "BEEP Software Consistency Repository",
-            "audit_status": "DEVELOPMENT",
-            "description": (
-                "Append-only audit records for reference-home "
-                "review and approval decisions."
-            ),
-            "records": [
-                {
-                    "record_id": "TEST-APPROVAL-001",
-                    "reference_home_id": "BEEP-HOME-001",
-                    "reference_home_version": "1.0.0",
-                    "decision": "APPROVED",
-                    "reviewer": "Test Technical Reviewer",
-                    "approval_authority": "B.E.E.P. Board of Directors",
-                    "evidence": "TEST-EVIDENCE-001",
-                    "pull_request": "TEST-PR-001",
-                    "decision_date": "2026-11-17",
-                    "board_resolution_reference": "TEST-BOARD-RES-001",
-                    "technical_review_record": "TEST-REVIEW-001",
-                    "technical_review_date": "2026-11-16",
-                    "technical_review_sha256": "a" * 64,
-                    "reviewed_content_sha256": "b" * 64,
-                }
-            ],
-        }
-
-        audit_path.write_text(
-            json.dumps(audit, indent=2),
-            encoding="utf-8",
-        )
-
-        
-        
-        errors = validate_submission(
-            self.folder,
-            production=True,
-            registry_path=registry_path,
-            approvals_directory=approvals_directory,
-            audit_path=audit_path,
-        )
-
-
-        self.assertEqual(errors, [])
 
     def test_production_rejects_missing_approval_document(self):
         registry_source = (
