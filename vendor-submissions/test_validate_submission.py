@@ -550,13 +550,18 @@ class TestVendorSubmissionValidator(unittest.TestCase):
 
         self.generate_test_hashes()
 
-        # Create a temporary approval audit record.
+               # Create a fictional approval audit record for testing.
+        # This fixture does not represent an actual Board decision.
         audit_path = self.folder / "test-approval-audit.json"
 
         audit = {
-            "audit_schema_version": "1.0.0",
+            "audit_schema_version": "1.1.0",
             "repository": "BEEP Software Consistency Repository",
             "audit_status": "DEVELOPMENT",
+            "description": (
+                "Append-only audit records for reference-home "
+                "review and approval decisions."
+            ),
             "records": [
                 {
                     "record_id": "TEST-APPROVAL-001",
@@ -569,7 +574,10 @@ class TestVendorSubmissionValidator(unittest.TestCase):
                     "pull_request": "TEST-PR-001",
                     "decision_date": "2026-11-17",
                     "board_resolution_reference": "TEST-BOARD-RES-001",
-
+                    "technical_review_record": "TEST-REVIEW-001",
+                    "technical_review_date": "2026-11-16",
+                    "technical_review_sha256": "a" * 64,
+                    "reviewed_content_sha256": "b" * 64,
                 }
             ],
         }
