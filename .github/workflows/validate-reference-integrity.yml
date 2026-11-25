@@ -53,6 +53,9 @@ jobs:
       - name: Validate bidirectional approval audit consistency
         run: python test-homes/validate_approval_audit_consistency.py test-homes/reference-home-registry.json test-homes/reference-approval-audit.json
 
+      - name: Validate bidirectional retirement audit consistency
+        run: python test-homes/validate_retirement_audit_consistency.py test-homes/reference-home-registry.json test-homes/reference-approval-audit.json
+
       - name: Verify approval audit history is append-only
         if: github.event_name == 'pull_request'
         env:
@@ -185,6 +188,8 @@ jobs:
 
           python test-homes/run_required_unit_tests.py test_validate_reference_versioning.py 65
 
+          python test-homes/run_required_unit_tests.py test_validate_retirement_audit_consistency.py 40
+
           python test-homes/run_required_unit_tests.py test_validate_review_approval_chronology.py 30
 
           python test-homes/run_required_unit_tests.py test_validate_review_assignment_consistency.py 40
@@ -211,6 +216,6 @@ jobs:
 
           echo "========================================"
           echo "ALL REQUIRED REPOSITORY UNIT TESTS PASSED"
-          echo "Verified test suites: 27/27"
-          echo "Verified unit tests: 874/874"
+          echo "Verified test suites: 28/28"
+          echo "Verified unit tests: 914/914"
           echo "========================================"
